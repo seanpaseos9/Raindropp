@@ -10,7 +10,7 @@ export const
 	RECAPTCHA_SITE_KEY = '6LfB38wUAAAAAMX3VuFcriTz-Tb-qw7MD966XNnk'
 
 export const
-	API_ENDPOINT_URL 	= `${process.env.NODE_ENV == 'production' || RAINDROP_ENVIRONMENT == 'react-native' ? 'https://api.raindrop.io' : 'http://localhost:3000' }/v1/`,
+	API_ENDPOINT_URL 	= `${process.env.LOCAL_API ? 'http://localhost:3000' : 'https://api.raindrop.io'}/v1/`,
 	API_RETRIES 		= 3,
 	API_TIMEOUT 		= 30000,
 	FAVICON_URL 		= `${WORKERS_BASE_URL}/favicon`,

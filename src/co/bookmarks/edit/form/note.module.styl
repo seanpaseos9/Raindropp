@@ -1,5 +1,13 @@
+.noteContainer {
+    display: flex
+    flex-direction: column
+    width: 100%
+    position: relative
+}
+
 .note {
     position: relative
+    width: 100%
 }
 
 .button {
@@ -7,4 +15,123 @@
     right: var(--padding-micro)
     bottom: var(--padding-micro)
     --primary-text-color: var(--disable-text-color)
+}
+
+.cleanCard {
+    background: var(--background-color)
+    border: 1px solid var(--shadow-light-color, rgba(0, 0, 0, 0.1))
+    border-radius: var(--border-radius, 4px)
+    padding: var(--padding-small) var(--padding-medium)
+    position: relative
+    cursor: pointer
+    min-height: 2.8rem
+    transition: border-color 0.15s ease, box-shadow 0.15s ease
+
+    &:hover {
+        border-color: var(--shadow-color, rgba(0, 0, 0, 0.2))
+    }
+}
+
+.cleanBody {
+    font-size: var(--primary-font-size, 14px)
+    line-height: var(--primary-line-height, 1.4)
+    color: var(--primary-text-color)
+    word-break: break-word
+    user-select: text
+
+    p {
+        margin: 0 0 0.4em 0
+        &:last-child {
+            margin-bottom: 0
+        }
+    }
+}
+
+.placeholder {
+    color: var(--disable-text-color)
+    font-size: var(--primary-font-size, 14px)
+    font-style: italic
+}
+
+.metaRow {
+    display: flex
+    align-items: center
+    justify-content: space-between
+    margin-top: var(--padding-small)
+    padding-top: var(--padding-micro)
+    border-top: 1px dashed var(--shadow-light-color, rgba(0, 0, 0, 0.08))
+}
+
+.urlBadge {
+    display: inline-flex
+    align-items: center
+    gap: 0.35rem
+    font-size: var(--tertiary-font-size, 12px)
+    color: var(--secondary-text-color)
+    background: var(--alternative-background-color, rgba(0, 0, 0, 0.05))
+    padding: 0.2rem 0.55rem
+    border-radius: 12px
+    user-select: none
+    cursor: pointer
+    transition: all 0.15s ease
+    border: none
+    outline: none
+
+    &:hover {
+        background: var(--hover-background-color, rgba(0, 0, 0, 0.1))
+        color: var(--primary-text-color)
+    }
+
+    svg {
+        width: 12px
+        height: 12px
+        fill: currentColor
+    }
+}
+
+.editActionBtn {
+    appearance: none
+    border: none
+    background: transparent
+    color: var(--secondary-text-color)
+    cursor: pointer
+    padding: var(--padding-micro) var(--padding-small)
+    border-radius: var(--border-radius, 4px)
+    display: inline-flex
+    align-items: center
+    gap: 0.3rem
+    font-size: var(--tertiary-font-size, 12px)
+    transition: all 0.15s ease
+
+    &:hover {
+        color: var(--accent-color)
+        background: var(--hover-background-color, rgba(0, 0, 0, 0.05))
+    }
+}
+
+.editingBar {
+    display: flex
+    align-items: center
+    justify-content: space-between
+    margin-top: var(--padding-micro)
+    padding: 0 var(--padding-micro)
+}
+
+.doneBtn {
+    appearance: none
+    border: none
+    background: var(--alternative-background-color, rgba(0, 0, 0, 0.06))
+    color: var(--accent-color)
+    font-weight: 500
+    font-size: var(--tertiary-font-size, 12px)
+    padding: 0.2rem 0.6rem
+    border-radius: var(--border-radius, 4px)
+    cursor: pointer
+    transition: all 0.15s ease
+    margin-left: auto
+
+    &:hover {
+        background: var(--accent-color)
+        color: #ffffff
+    }
 }

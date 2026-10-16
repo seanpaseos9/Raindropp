@@ -1,0 +1,260 @@
+.overlay {
+    position: fixed
+    top: 0
+    left: 0
+    right: 0
+    bottom: 0
+    z-index: 999999
+    background: rgba(10, 10, 12, 0.94)
+    backdrop-filter: blur(20px)
+    -webkit-backdrop-filter: blur(20px)
+    display: flex
+    flex-direction: column
+    user-select: none
+    -webkit-user-select: none
+    touch-action: none
+    animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0
+    }
+    to {
+        opacity: 1
+    }
+}
+
+.header {
+    height: 3rem
+    min-height: 56px
+    display: flex
+    align-items: center
+    justify-content: space-between
+    padding: 0 1.2rem
+    color: #ffffff
+    z-index: 10
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 100%)
+}
+
+.counter {
+    font-size: 0.9rem
+    font-weight: 500
+    letter-spacing: 0.5px
+    color: rgba(255, 255, 255, 0.85)
+    display: flex
+    align-items: center
+    gap: 0.5rem
+}
+
+.actions {
+    display: flex
+    align-items: center
+    gap: 0.6rem
+}
+
+.btn {
+    appearance: none
+    border: none
+    background: rgba(255, 255, 255, 0.12)
+    color: #ffffff
+    width: 2.4rem
+    height: 2.4rem
+    border-radius: 50%
+    display: flex
+    align-items: center
+    justify-content: center
+    cursor: pointer
+    outline: none
+    transition: all 0.15s ease
+    padding: 0
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.24)
+        transform: scale(1.05)
+    }
+
+    &:active {
+        transform: scale(0.95)
+    }
+
+    svg {
+        width: 1.2rem
+        height: 1.2rem
+        fill: currentColor
+    }
+}
+
+.btnActive {
+    background: var(--accent-color, #007aff) !important
+    color: #ffffff
+}
+
+.stage {
+    flex: 1
+    position: relative
+    display: flex
+    align-items: center
+    justify-content: center
+    overflow: hidden
+    cursor: zoom-in
+
+    &[data-zoomed='true'] {
+        cursor: grab
+    }
+
+    &[data-dragging='true'] {
+        cursor: grabbing
+    }
+}
+
+.imageWrap {
+    width: 100%
+    height: 100%
+    display: flex
+    align-items: center
+    justify-content: center
+    padding: 1rem
+    box-sizing: border-box
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)
+}
+
+.image {
+    max-width: 92vw
+    max-height: 84vh
+    object-fit: contain
+    border-radius: 6px
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5)
+    pointer-events: auto
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)
+    will-change: transform
+}
+
+.navBtn {
+    position: absolute
+    top: 50%
+    transform: translateY(-50%)
+    z-index: 10
+    appearance: none
+    border: none
+    width: 3.2rem
+    height: 3.2rem
+    border-radius: 50%
+    background: rgba(255, 255, 255, 0.14)
+    color: #ffffff
+    display: flex
+    align-items: center
+    justify-content: center
+    cursor: pointer
+    outline: none
+    backdrop-filter: blur(8px)
+    -webkit-backdrop-filter: blur(8px)
+    transition: all 0.15s ease
+    padding: 0
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.3)
+        transform: translateY(-50%) scale(1.08)
+    }
+
+    &:active {
+        transform: translateY(-50%) scale(0.95)
+    }
+
+    svg {
+        width: 1.6rem
+        height: 1.6rem
+        fill: currentColor
+    }
+}
+
+.navPrev {
+    left: 1.5rem
+}
+
+.navNext {
+    right: 1.5rem
+}
+
+.footer {
+    height: 2.8rem
+    display: flex
+    align-items: center
+    justify-content: center
+    padding: 0 1rem
+    color: rgba(255, 255, 255, 0.7)
+    font-size: 0.85rem
+    z-index: 10
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 100%)
+}
+
+.altText {
+    max-width: 80%
+    text-overflow: ellipsis
+    overflow: hidden
+    white-space: nowrap
+    text-align: center
+}
+
+.loadingSpinner {
+    width: 2.5rem
+    height: 2.5rem
+    border: 3px solid rgba(255, 255, 255, 0.2)
+    border-top-color: #ffffff
+    border-radius: 50%
+    animation: spin 0.8s linear infinite
+    position: absolute
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg)
+    }
+}
+
+.errorState {
+    display: flex
+    flex-direction: column
+    align-items: center
+    gap: 0.8rem
+    color: rgba(255, 255, 255, 0.8)
+    text-align: center
+    padding: 2rem
+
+    a {
+        color: var(--accent-color, #007aff)
+        text-decoration: underline
+    }
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 600px) {
+    .header {
+        height: 2.6rem
+        padding: 0 0.8rem
+    }
+
+    .navBtn {
+        width: 2.6rem
+        height: 2.6rem
+
+        svg {
+            width: 1.3rem
+            height: 1.3rem
+        }
+    }
+
+    .navPrev {
+        left: 0.5rem
+    }
+
+    .navNext {
+        right: 0.5rem
+    }
+
+    .image {
+        max-width: 98vw
+        max-height: 80vh
+        border-radius: 4px
+    }
+}
