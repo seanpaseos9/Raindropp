@@ -1,0 +1,55 @@
+.suggested {
+    display: flex
+    flex-wrap: wrap
+    overflow: hidden
+    min-height: calc(var(--icon-size) + var(--padding-small))
+    max-height: calc(var(--icon-size) + var(--padding-small))
+    transition: opacity .15s ease-in, max-height .3s ease-out, min-height .3s ease-out
+
+    &[data-expanded=true]:not(:empty) {
+        max-height: calc( (var(--icon-size) + var(--padding-small)) * 3 );
+
+        &:hover {
+            transition-delay: .2s;
+        }
+    }
+
+    &:empty {
+        opacity: 0
+
+        &[data-is-new='false'] {
+            min-height: 0
+            max-height: 0
+        }
+    }
+
+    > * {
+        margin-top: var(--padding-small)
+        margin-right: var(--padding-small)
+    }
+}
+
+.path {
+    max-width: 15ch
+    overflow: hidden
+    overflow: clip
+    direction: rtl
+    text-align: left
+    text-overflow: ellipsis
+
+    span {
+        direction: ltr;
+        unicode-bidi: embed;
+    }
+}
+
+.suggestion {
+    --shadow-color: var(--shadow-light-color)
+    * {
+        --icon-size: var(--padding-medium)
+    }
+
+    &[data-tint]:not([data-tint='']) {
+        background: unquote('color-mix(in srgb, var(--tint) 12%, transparent)')
+    }
+}

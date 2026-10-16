@@ -1,0 +1,33 @@
+.page {
+	width: 100%
+	overflow: auto
+    display: grid
+	grid-template-columns: minmax(auto, 9.5rem) //380px
+    grid-template-rows: 1fr auto
+	align-items: center
+	justify-content: center
+}
+
+.content {
+	width: 100%
+	padding: var(--padding-medium) 0
+}
+
+.logo {
+	display: block
+	margin: var(--padding-large) auto
+	width: 1.6rem //64px
+	height: 1.6rem //64px
+}
+
+.footer {
+	display: flex
+	align-items: center
+    justify-content: space-between
+	color: var(--secondary-text-color)
+	padding: var(--padding-medium)
+
+	a {
+		color: var(--primary-text-color)
+	}
+}

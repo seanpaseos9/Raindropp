@@ -1,0 +1,46 @@
+import t from '~t'
+import React from 'react'
+import { Link } from 'react-router-dom'
+
+import Header, { Title, Space } from '~co/common/header'
+import Button from '~co/common/button'
+import Icon from '~co/common/icon'
+import CopyButton from '~co/highlights/copy-button'
+import ExportButton from '~co/highlights/export-button'
+
+export default function ExtensionHighlightsScreen({ _id, count }) {
+    return (
+        <Header 
+            data-no-shadow
+            data-static>
+            <Button
+                as={Link}
+                to='/'
+                title={t.s('back')}>
+                <Icon name='back' />
+            </Button>
+
+            <Title>{count ? t.format('highlightsCount', count) : t.s('highlights')}</Title>
+
+            <Space />
+            
+            {count ? (<>
+                <Button
+                    as={Link}
+                    to='/extension/highlights'
+                    variant='link'
+                    title={t.s('addHighlights')}>
+                    <Icon name='add' />
+                </Button>
+
+                <CopyButton _id={_id}>
+                    <Icon name='duplicates' />
+                </CopyButton>
+
+                <ExportButton _id={_id}>
+                    <Icon name='download' />
+                </ExportButton>
+            </>) : null}
+        </Header>
+    )
+}

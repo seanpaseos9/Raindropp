@@ -1,0 +1,259 @@
+import s from './edit.module.styl'
+import React from 'react'
+import t from '~t'
+import config from '~config'
+import { connect } from 'react-redux'
+import { clientUpdate, clientResetToken, clientTestTokenCreate, clientTestTokenLoad, clientRevoke, clientIconUpload } from '~data/actions/oauth'
+import { makeClient, getTestToken } from '~data/selectors/oauth'
+
+import { Layout, Label, Text, Buttons, Title, Separator } from '~co/common/form'
+import Modal, { Header, Content } from '~co/overlay/modal'
+import { Error, Confirm } from '~co/overlay/dialog'
+import Button from '~co/common/button'
+import Icon from '~co/common/icon'
+
+class DevEdit extends React.Component {
+    static defaultProps = {
+        _id: 0,
+        onClose: undefined
+    }
+
+    state = {
+        loading: false,
+        unsaved: false,
+        client: this.props._client
+    }
+
+    componentDidMount() {
+        this.props.clientTestTokenLoad(this.props._id)
+    }
+
+    componentDidUpdate(prev) {
+        if (prev._client != this.props._client)
+            this.setState({ client: this.props._client })
+    }
+
+    onTextChange = e=>{
+        const key = e.currentTarget.name
+        const val = e.currentTarget.value
+
+        this.setState({
+            unsaved: true,
+            client: {
+                ...this.state.client,
+                ...(Array.isArray(this.state.client[key]) ? {
+                    [key]: [val]
+                } : {
+                    [key]: val
+                })
+            }
+        })
+    }
+
+    onSubmit = (e)=>{
+        e.preventDefault()
+        this.setState({ loading: true })
+
+        this.props.clientUpdate(
+            this.props._id,
+            this.state.client,
+            ()=>{
+                this.setState({ loading: false, unsaved: false })
+            },
+            e => {
+                this.setState({ loading: false })
+                Error(e)
+            }
+        )
+    }
+
+    onIconUpload = (e)=>{
+        if (!e.target.files[0]) return
+        this.setState({ loading: true })
+
+        this.props.clientIconUpload(
+            this.props._id,
+            e.target.files[0],
+            ()=>{
+                this.setState({ loading: false })
+            },
+            e => {
+                this.setState({ loading: false })
+                Error(e)
+            }
+        )
+    }
+
+    onResetSecretClick = async(e)=>{
+        e.preventDefault()
+
+        if (await Confirm(t.s('areYouSure')))
+            this.props.clientResetToken(this.props._id, ()=>{}, Error)
+    }
+
+    onCreateTestTokenClick = async(e)=>{
+        e.preventDefault()
+
+        if (await Confirm(t.s('areYouSure')))
+            this.props.clientTestTokenCreate(this.props._id, ()=>{}, Error)
+    }
+
+    onRevokeAllTokensClick = async(e)=>{
+        e.preventDefault()
+
+        if (await Confirm(t.s('areYouSure')))
+            this.props.clientRevoke(this.props._id, ()=>{}, Error)
+    }
+
+    render() {
+        const { testToken, onClose } = this.props
+        const { loading, unsaved, client: { _id, name, description, site, redirects: [redirect=''], secret, icon } } = this.state
+
+        return (
+            <Modal 
+                className={s.edit}
+                onClose={onClose}>
+                <Header title={t.s('app')} />
+
+                <Content>
+                    <form onSubmit={this.onSubmit}>
+                        <Layout type='grid'>
+                            <Label>{t.s('name')}</Label>
+                            <Text 
+                                autoFocus
+                                required
+                                disabled={loading}
+                                value={name}
+                                name='name'
+                                onChange={this.onTextChange} />
+
+                            <Label>{t.s('description')}</Label>
+                            <Text 
+                                required
+                                autoSize
+                                disabled={loading}
+                                value={description}
+                                name='description'
+                                onChange={this.onTextChange} />
+
+                            <Label>{t.s('site')}</Label>
+                            <Text 
+                                required
+                                autoSize
+                                disabled={loading}
+                                value={site}
+                                name='site'
+                                onChange={this.onTextChange} />
+
+                            <Label>{t.s('devRedirectUri')}</Label>
+                            <Text 
+                                required
+                                autoSize
+                                disabled={loading}
+                                value={redirect}
+                                name='redirects'
+                                onChange={this.onTextChange} />
+
+                            <Label>{t.s('cover')}</Label>
+                            <div>
+                                {icon && (
+                                    <>
+                                        <img src={icon} width='100' />
+                                        <br />
+                                    </>
+                                )}
+
+                                <Button 
+                                    as='label'
+                                    variant='outline'
+                                    disabled={loading}>
+                                    <Icon name='upload' />
+                                    {t.s('upload')}…
+
+                                    <input 
+                                        type='file'
+                                        accept='image/*'
+                                        style={{display: 'none'}}
+                                        onChange={this.onIconUpload} />
+                                </Button>
+                            </div>
+
+                            {unsaved && (
+                                <Buttons>
+                                    <Button
+                                        as='input'
+                                        type='submit'
+                                        variant='primary'
+                                        disabled={loading}
+                                        value={t.s('save')} />
+                                </Buttons>
+                            )}
+
+                            <Separator />
+
+                            <Title>{t.s('devCredentials')}</Title>
+
+                            <Label>{t.s('devClientId')}</Label>
+                            <Text 
+                                readOnly
+                                variant='less'
+                                value={_id} />
+
+                            <Label>{t.s('devClientSecret')}</Label>
+                            <div>
+                                <Text 
+                                    readOnly
+                                    variant='less'
+                                    value={secret} />
+
+                                <a href='' onClick={this.onResetSecretClick}>
+                                    {t.s('devResetSecret')}
+                                </a>
+                            </div>
+
+                            <Label>{t.s('devTestToken')}</Label>
+                            <div>
+                                {testToken && (
+                                    <Text 
+                                        readOnly
+                                        variant='less'
+                                        value={testToken} />
+                                )}
+
+                                <a href='' onClick={this.onCreateTestTokenClick}>
+                                    {t.s(testToken ? 'devResetTestToken' : 'devCreateTestToken')}
+                                </a>
+
+                                <br /><br />
+
+                                <a href={config.links.dev.token} target='_blank'>
+                                    {t.s('howToUse')}
+                                </a>
+                            </div>
+
+                            <Buttons>
+                                <Button
+                                    variant='outline'
+                                    onClick={this.onRevokeAllTokensClick}>
+                                    {t.s('devRevokeAllTokens')}
+                                </Button>
+                            </Buttons>
+                        </Layout>
+                    </form>
+                </Content>
+            </Modal>
+        )
+    }
+}
+
+export default connect(
+    ()=>{
+        const getClient = makeClient()
+
+        return (state, { _id })=>({
+            _client: getClient(state, _id),
+            testToken: getTestToken(state, _id)
+        })
+    },
+    { clientUpdate, clientResetToken, clientTestTokenCreate, clientTestTokenLoad, clientRevoke, clientIconUpload }
+)(DevEdit)

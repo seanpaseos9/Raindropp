@@ -1,0 +1,37 @@
+import Immutable from 'seamless-immutable'
+
+export const normalizeUser = (user={})=>{
+	const clean = {
+		_id: 				user._id,
+		name:				user.name||'',
+		email: 				user.email||'',
+		emailConfirmed:		user.emailConfirmed ? true : false,
+		password: 			Boolean(user.password)||false,
+		avatar:				user.avatar,
+		pro: 				Boolean(user.pro)||false,
+		proExpire: 			user.proExpire||null,
+		files:				user.files||{ size: 0, used: 0 },
+		registered:			user.registered||null,
+		lastUpdate:			user.lastUpdate||null,
+
+		tfa:				user.tfa || {},
+
+		//connect
+		google:				user.google || {},
+		apple:				user.apple || {},
+		dropbox:			user.dropbox || {},
+		gdrive:				user.gdrive || {},
+		onedrive:			user.onedrive || {},
+	}
+
+	return Immutable(clean)
+}
+
+export const blankCurrent = normalizeUser({})
+
+export const blankSubscription = Immutable({
+	plan: '',
+	links: {},
+	gateway: {},
+	loading: false
+})

@@ -1,0 +1,43 @@
+{
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+
+    "rewrites": [
+        {
+            "source": "/(account|add|extension|join|my|settings|suggestions)(/.*)?",
+            "destination": "/index.html"
+        },
+        {
+            "source": "/pb/site.js",
+            "destination": "https://plausible.io/js/plausible.exclusions.js"
+        },
+        {
+            "source": "/pb/hash.js",
+            "destination": "https://plausible.io/js/plausible.hash.exclusions.js"
+        },
+        {
+            "source": "/pb/api/event",
+            "destination": "https://plausible.io/api/event"
+        }
+    ],
+
+    "headers": [
+        {
+            "source": "/(.*)",
+            "headers": [
+                {
+                    "key": "X-Frame-Options",
+                    "value": "DENY"
+                }
+            ]
+        },
+        {
+            "source": "/assets/(.*)",
+            "headers": [
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=365000000, immutable"
+                }
+            ]
+        }
+    ]
+}

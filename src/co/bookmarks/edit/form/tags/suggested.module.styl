@@ -1,0 +1,39 @@
+.suggested {
+    display: flex
+    flex-wrap: wrap
+    overflow: hidden
+    min-height: calc(var(--icon-size) + var(--padding-small))
+    max-height: calc(var(--icon-size) + var(--padding-small))
+    transition: opacity .15s ease-in, max-height .3s ease-out, min-height .3s ease-out
+
+    &[data-expanded=true]:not(:empty) {
+        max-height: calc( (var(--icon-size) + var(--padding-small)) * 3 )
+
+        &:hover {
+            transition-delay: .2s;
+        }
+    }
+
+    &:empty {
+        opacity: 0
+    }
+
+    > * {
+        margin-top: var(--padding-small)
+        margin-right: var(--padding-small)
+        max-width: 300px
+        overflow: hidden
+        overflow: clip
+    }
+}
+
+.suggestion {
+    --shadow-color: var(--shadow-light-color)
+    * {
+        --icon-size: var(--padding-medium)
+    }
+
+    &[data-is-new=true] {
+        color: var(--secondary-text-color)
+    }
+}
