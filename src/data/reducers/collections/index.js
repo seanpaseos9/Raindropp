@@ -82,6 +82,13 @@ const initialState = Immutable({
 			}
 		},
 		{
+			_id: -9,
+			title: 'Duplicates',
+			access: {
+				level: 4
+			}
+		},
+		{
 			_id: -99,
 			title: 'Trash',
 			access: {

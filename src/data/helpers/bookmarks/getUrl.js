@@ -22,5 +22,14 @@ export const getUrlQuery = (query)=>{
 	return '?'+entities.join('&')
 }
 
-export const getUrl = (__id, query)=>
-	`${parseInt(__id)||0}${getUrlQuery(query)}`
+export const getUrl = (__id, query)=>{
+	const id = parseInt(__id) || 0
+	if (id === -9) {
+		const dupQuery = {
+			...(query || {}),
+			search: (query && query.search ? `${query.search} duplicate:true` : 'duplicate:true')
+		}
+		return `0${getUrlQuery(dupQuery)}`
+	}
+	return `${id}${getUrlQuery(query)}`
+}

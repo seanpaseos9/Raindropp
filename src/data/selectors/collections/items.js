@@ -61,7 +61,7 @@ export const makeTree = ()=> createSelector(
 			sections = [{
 				_id: 'g-1',
 				title: 'default',
-				data: makeGroupTree([0, -1, -99].filter(filterIds), items, sortedItems),
+				data: makeGroupTree([0, -1, -9, -99].filter(filterIds), items, sortedItems),
 				system: true
 			}]
 	

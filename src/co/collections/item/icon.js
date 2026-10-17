@@ -16,6 +16,7 @@ const CollectionIcon = React.memo(({ _id, cover, active, loading })=>{
 	switch(_id){
 		case 0: name = 'cloud'+prefix; break;
 		case -1: name = 'inbox'+prefix; break;
+		case -9: name = 'duplicates'+prefix; break;
 		case -99: name = 'trash'+prefix; break;
 		case -100: case -101: name = 'add'+prefix; break;
 		default: name = 'default_collection'+prefix; break;

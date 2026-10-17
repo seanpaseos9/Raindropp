@@ -13,7 +13,7 @@
 .noteContainer {
     display: flex
     flex-direction: column
-    gap: 8px
+    gap: 6px
     width: 100%
     min-width: 0
     box-sizing: border-box
@@ -25,7 +25,7 @@
     justify-content: flex-end
     gap: 12px
     font-size: 11px
-    margin-bottom: 2px
+    min-height: 18px
 }
 
 .actionBtn {
@@ -57,9 +57,7 @@
     line-height: 1.5
     position: relative
     cursor: text
-    min-height: 44px
-    word-break: break-word
-    white-space: pre-wrap
+    min-height: 40px
     color: var(--primary-text-color)
     transition: background 0.15s, border-color 0.15s
     box-sizing: border-box
@@ -68,6 +66,14 @@
         background: rgba(0, 0, 0, 0.04)
         border-color: var(--accent-color)
     }
+}
+
+.cleanTextContent {
+    word-break: break-word
+    white-space: pre-wrap
+    font-size: 13px
+    line-height: 1.45
+    color: var(--primary-text-color)
 }
 
 .emptyCleanText {

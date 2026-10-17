@@ -1,6 +1,6 @@
 import s from './note.module.styl'
 import t from '~t'
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useState, useRef, useEffect } from 'react'
 import links from '~config/links'
 
 import { Text, Label } from '~co/common/form'
@@ -9,10 +9,21 @@ import Button from '~co/common/button'
 import { Confirm } from '~co/overlay/dialog'
 
 import NoteImageCarousel from './carousel'
-import { extractImageUrls, formatImageNoteEntry, updateImageCaptionInNote, updateImageRatingInNote } from './carousel/helper'
+import { 
+    extractImageUrls, 
+    formatMultipleImageEntries, 
+    updateImageCaptionInNote, 
+    updateImageRatingInNote 
+} from './carousel/helper'
 
-export default function BookmarkEditFormNote({ autoFocus, item: { note = '' }, onCommit, onChange }) {    
+export default function BookmarkEditFormNote({ autoFocus, item: { note = '' }, onCommit, onChange, onSave }) {    
     const [editingRaw, setEditingRaw] = useState(autoFocus === 'note')
+
+    // Always keep a ref to the latest note to avoid stale closures during rapid or sequential additions
+    const noteRef = useRef(note)
+    useEffect(() => {
+        noteRef.current = note
+    }, [note])
 
     // Parse image links, titles, captions, and ratings from note
     const { hasImages, images, cleanText } = useMemo(() => {
@@ -20,7 +31,9 @@ export default function BookmarkEditFormNote({ autoFocus, item: { note = '' }, o
     }, [note])
 
     const onChangeField = useCallback(e => {
-        onChange({ [e.target.getAttribute('name')]: e.target.value })
+        const val = e.target.value
+        noteRef.current = val
+        onChange({ [e.target.getAttribute('name')]: val })
     }, [onChange])
 
     const onMarkdownClick = useCallback(e => {
@@ -34,69 +47,82 @@ export default function BookmarkEditFormNote({ autoFocus, item: { note = '' }, o
     }, [])
 
     const handleBlur = useCallback((e) => {
-        onCommit && onCommit(e)
+        if (onCommit) onCommit(e)
+        if (onSave) onSave()
         if (hasImages) {
             setEditingRaw(false)
         }
-    }, [onCommit, hasImages])
+    }, [onCommit, onSave, hasImages])
 
-    // Add image with optional caption and rating
-    const onAddImage = useCallback((url, caption = '', rating = 0) => {
-        const entry = formatImageNoteEntry(url, caption, rating)
-        if (!entry) return
-        const newNote = note ? `${note.trim()}\n${entry}` : entry
+    // Save and commit note changes immediately to Redux & storage/API
+    const saveNote = useCallback((newNote) => {
+        noteRef.current = newNote
         onChange({ note: newNote })
-        onCommit && onCommit()
-    }, [note, onChange, onCommit])
+        if (onSave) onSave()
+        if (onCommit) onCommit()
+    }, [onChange, onSave, onCommit])
+
+    // Add 1, 2, or more photos simultaneously or sequentially
+    const onAddImage = useCallback((urlInput, caption = '', rating = 0) => {
+        const entries = formatMultipleImageEntries(urlInput, caption, rating)
+        if (!entries || !entries.length) return
+
+        const currentNote = noteRef.current || ''
+        const appended = entries.join('\n')
+        const newNote = currentNote.trim() ? `${currentNote.trim()}\n${appended}` : appended
+        saveNote(newNote)
+    }, [saveNote])
 
     // Update caption of an existing image
     const onUpdateCaption = useCallback((image, newCaption) => {
-        const newNote = updateImageCaptionInNote(note, image, newCaption)
-        onChange({ note: newNote })
-        onCommit && onCommit()
-    }, [note, onChange, onCommit])
+        const currentNote = noteRef.current || ''
+        const newNote = updateImageCaptionInNote(currentNote, image, newCaption)
+        saveNote(newNote)
+    }, [saveNote])
 
     // Update star rating of an existing image
     const onUpdateRating = useCallback((image, newRating) => {
-        const newNote = updateImageRatingInNote(note, image, newRating)
-        onChange({ note: newNote })
-        onCommit && onCommit()
-    }, [note, onChange, onCommit])
+        const currentNote = noteRef.current || ''
+        const newNote = updateImageRatingInNote(currentNote, image, newRating)
+        saveNote(newNote)
+    }, [saveNote])
 
     const handlePromptAddImage = useCallback(() => {
-        const url = window.prompt('Paste an image URL or Google Drive share link:')
+        const url = window.prompt('Paste image URL(s) or Google Drive link (separate multiple with newlines or commas):')
         if (url) {
-            const caption = window.prompt('Optional title or caption for this image:') || ''
+            const caption = window.prompt('Optional title or caption for the photo(s):') || ''
             onAddImage(url, caption)
         }
     }, [onAddImage])
 
     return (
         <>
-            {/* Standard label to keep grid alignment intact */}
+            {/* Standard label to maintain Raindrop grid layout */}
             <Label>{t.s('note')}</Label>
 
             <div className={s.noteContainer}>
                 {/* Note actions toolbar */}
                 <div className={s.topBar}>
-                    <button
-                        type='button'
-                        className={s.actionBtn}
-                        onClick={handlePromptAddImage}
-                        title='Attach an image link with optional title'>
-                        ➕ Add Image
-                    </button>
-                    {hasImages && (
+                    {hasImages ? (
                         <button
                             type='button'
                             className={s.actionBtn}
-                            onClick={() => setEditingRaw(prev => !prev)}>
-                            {editingRaw ? '✓ Done Editing' : '✏️ Edit Raw Note'}
+                            onClick={() => setEditingRaw(prev => !prev)}
+                            title='Switch between visual carousel and raw Markdown'>
+                            {editingRaw ? '🖼️ View Carousel' : '✏️ Edit Raw Note'}
+                        </button>
+                    ) : (
+                        <button
+                            type='button'
+                            className={s.actionBtn}
+                            onClick={handlePromptAddImage}
+                            title='Attach image links or Google Drive photos'>
+                            📷 Attach Image(s)
                         </button>
                     )}
                 </div>
 
-                {/* Touch-swipeable carousel with captions and smooth scrolling */}
+                {/* Touch-swipeable carousel with captions, star ratings, and smooth scrolling */}
                 {hasImages && (
                     <NoteImageCarousel 
                         images={images} 
@@ -105,21 +131,21 @@ export default function BookmarkEditFormNote({ autoFocus, item: { note = '' }, o
                         onUpdateRating={onUpdateRating} />
                 )}
 
-                {/* Note text field */}
+                {/* Note text field or preview */}
                 {hasImages && !editingRaw ? (
                     <div 
                         className={s.cleanNoteCard}
                         onClick={() => setEditingRaw(true)}
                         title='Click to edit note text'>
                         {cleanText ? (
-                            cleanText
+                            <div className={s.cleanTextContent}>{cleanText}</div>
                         ) : (
                             <span className={s.emptyCleanText}>
-                                (Images only in note — click here to add text)
+                                (Photos only in note — click here to add text)
                             </span>
                         )}
                         <div className={s.collapsedBanner}>
-                            <span>📷 {images.length} {images.length === 1 ? 'image' : 'images'} attached with captions</span>
+                            <span>📷 {images.length} {images.length === 1 ? 'photo' : 'photos'} in carousel</span>
                             <span className={s.inlineEditBtn}>Click to edit text</span>
                         </div>
                     </div>

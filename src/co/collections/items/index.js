@@ -26,6 +26,7 @@ class CollectionsItems extends React.Component {
 			items: [
 				{_id: 0, title: t.s('allBookmarks')},
 				{_id: -1, title: t.s('defaultCollection--1')},
+				{_id: -9, title: t.s('defaultCollection--9', 'Duplicates')},
 				{_id: -99, title: t.s('defaultCollection--99')}
 			],
 			groupTitle: _.capitalize(t.s('collectionsCount'))

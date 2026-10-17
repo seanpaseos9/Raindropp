@@ -3,21 +3,25 @@ import ReactDOM from 'react-dom'
 import s from './lightbox.module.styl'
 import StarRating from './rating'
 
-export default function Lightbox({ images = [], initialIndex = 0, onClose, onUpdateRating }) {
+export default function Lightbox({ images = [], initialIndex = 0, onClose, onUpdateRating, onUpdateCaption }) {
     const [index, setIndex] = useState(initialIndex)
     const [zoom, setZoom] = useState(1)
     const [offset, setOffset] = useState({ x: 0, y: 0 })
     const [isDragging, setIsDragging] = useState(false)
+    const [isEditingCaption, setIsEditingCaption] = useState(false)
+    const [editCaptionValue, setEditCaptionValue] = useState('')
+
     const dragStartRef = useRef({ x: 0, y: 0 })
     const touchStartRef = useRef({ x: 0, y: 0, time: 0 })
 
     const total = images.length
     const current = images[index] || {}
 
-    // Reset zoom when switching images
+    // Reset zoom and caption editing when switching images
     useEffect(() => {
         setZoom(1)
         setOffset({ x: 0, y: 0 })
+        setIsEditingCaption(false)
     }, [index])
 
     const goPrev = useCallback((e) => {
@@ -53,6 +57,10 @@ export default function Lightbox({ images = [], initialIndex = 0, onClose, onUpd
     // Keyboard navigation
     useEffect(() => {
         const onKeyDown = (e) => {
+            if (isEditingCaption) {
+                if (e.key === 'Escape') setIsEditingCaption(false)
+                return
+            }
             if (e.key === 'Escape') {
                 onClose()
             } else if (e.key === 'ArrowLeft') {
@@ -67,7 +75,7 @@ export default function Lightbox({ images = [], initialIndex = 0, onClose, onUpd
         }
         window.addEventListener('keydown', onKeyDown)
         return () => window.removeEventListener('keydown', onKeyDown)
-    }, [onClose, goPrev, goNext, zoomIn, zoomOut])
+    }, [onClose, goPrev, goNext, zoomIn, zoomOut, isEditingCaption])
 
     // Touch events for swiping left/right
     const onTouchStart = (e) => {
@@ -148,6 +156,17 @@ export default function Lightbox({ images = [], initialIndex = 0, onClose, onUpd
         }
     }
 
+    const handleSaveCaption = (e) => {
+        if (e) {
+            e.preventDefault()
+            e.stopPropagation()
+        }
+        if (onUpdateCaption) {
+            onUpdateCaption(current, editCaptionValue.trim())
+        }
+        setIsEditingCaption(false)
+    }
+
     if (typeof document === 'undefined') return null
 
     return ReactDOM.createPortal(
@@ -164,11 +183,43 @@ export default function Lightbox({ images = [], initialIndex = 0, onClose, onUpd
             <div className={s.topbar} onClick={e => e.stopPropagation()}>
                 <div className={s.titleArea}>
                     <span className={s.counter}>{index + 1} / {total}</span>
-                    <span className={s.alt} title={current.caption || current.title || current.url}>
-                        {current.caption ? `“${current.caption}”` : (current.title || current.source || 'Image')}
-                    </span>
+                    
+                    {!isEditingCaption ? (
+                        <>
+                            <span 
+                                className={s.alt} 
+                                title={current.caption || current.title || current.url}>
+                                {current.caption ? `“${current.caption}”` : (current.title || current.source || 'Photo')}
+                            </span>
+                            {onUpdateCaption && (
+                                <button
+                                    type='button'
+                                    className={s.inlineEditBtn}
+                                    onClick={() => {
+                                        setEditCaptionValue(current.caption || '')
+                                        setIsEditingCaption(true)
+                                    }}
+                                    title='Edit caption or title'>
+                                    ✏️
+                                </button>
+                            )}
+                        </>
+                    ) : (
+                        <form className={s.lightboxCaptionForm} onSubmit={handleSaveCaption}>
+                            <input
+                                type='text'
+                                autoFocus
+                                value={editCaptionValue}
+                                onChange={e => setEditCaptionValue(e.target.value)}
+                                placeholder='Photo title or caption...'
+                            />
+                            <button type='submit' className={s.captionSaveBtn}>Save</button>
+                            <button type='button' className={s.captionCancelBtn} onClick={() => setIsEditingCaption(false)}>✕</button>
+                        </form>
+                    )}
+
                     {/* Star Rating in Lightbox Header */}
-                    <div style={{ marginLeft: '8px' }}>
+                    <div style={{ marginLeft: '10px' }}>
                         <StarRating
                             rating={current.rating || 0}
                             size='small'

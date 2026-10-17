@@ -7,6 +7,7 @@ import {
 	API_TIMEOUT
 } from '../constants/app'
 import ApiError from './error'
+import { isGuestMode, handleGuestRequest } from './mockGuest'
 
 function* get(url, overrideOptions={}) {
 	const res = yield req(url, overrideOptions, API_RETRIES)
@@ -140,8 +141,6 @@ function* req(url, options={}, retries=0) {
 
 	throw new ApiError({ status, errorMessage: `${errorMessage} ${finalURL}` })
 }
-
-import { isGuestMode, handleGuestRequest } from './mockGuest'
 
 const fetchWrap = (url, options)=>{
 	if (isGuestMode()) {

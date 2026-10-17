@@ -54,6 +54,62 @@
     max-width: 320px
 }
 
+.inlineEditBtn {
+    background: none
+    border: none
+    color: #fff
+    opacity: 0.7
+    cursor: pointer
+    padding: 2px 6px
+    font-size: 13px
+    transition: opacity 0.15s, transform 0.1s
+
+    &:hover {
+        opacity: 1
+        transform: scale(1.15)
+    }
+}
+
+.lightboxCaptionForm {
+    display: flex
+    align-items: center
+    gap: 6px
+
+    input {
+        background: rgba(255, 255, 255, 0.15)
+        border: 1px solid rgba(255, 255, 255, 0.3)
+        border-radius: 6px
+        padding: 4px 8px
+        font-size: 13px
+        color: #fff
+        outline: none
+        min-width: 180px
+
+        &:focus {
+            border-color: var(--accent-color)
+        }
+    }
+
+    button {
+        border: none
+        border-radius: 4px
+        padding: 4px 8px
+        font-size: 12px
+        font-weight: 600
+        cursor: pointer
+    }
+
+    .captionSaveBtn {
+        background: var(--accent-color)
+        color: #fff
+    }
+
+    .captionCancelBtn {
+        background: rgba(255, 255, 255, 0.2)
+        color: #fff
+    }
+}
+
 .actions {
     display: flex
     align-items: center
