@@ -8,7 +8,7 @@ import { Separator } from '~co/common/form'
 import Button from '~co/common/button'
 import Icon from '~co/common/icon'
 
-export default function AccountSocialLogin({ disabled }) {
+export default function AccountSocialLogin({ disabled, onVendorClick }) {
     const redirect = sessionStorage.getItem('redirect') || ''
 
     return (<>
@@ -20,7 +20,8 @@ export default function AccountSocialLogin({ disabled }) {
                 variant='outline'
                 disabled={disabled}
                 data-block
-                href={`${API_ENDPOINT_URL}auth/${vendor}?redirect=${encodeURIComponent(redirect)}`}>
+                onClick={onVendorClick ? (e)=>{ e.preventDefault(); onVendorClick(vendor) } : undefined}
+                href={!onVendorClick ? `${API_ENDPOINT_URL}auth/${vendor}?redirect=${encodeURIComponent(redirect)}` : undefined}>
                 <Icon name={vendor} className={s.icon} /> {t.s('signInSocial')} <span>{vendor}</span>
             </Button>
         ))}

@@ -180,6 +180,12 @@ const checkJSON = (json)=>{
 	if (!json.result)
 		if (json.error || json.errorMessage || json.status >= 300)
 			throw new ApiError(json)
+
+	if (json && json.item && !json.user)
+		json.user = json.item
+
+	if (json && json.user && !json.item)
+		json.item = json.user
 }
 
 const defaultOptions = {

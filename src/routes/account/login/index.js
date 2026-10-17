@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo } from 'react'
 import { useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { loginWithPassword, refresh } from '~data/actions/user'
-import { enableGuestMode } from '~data/modules/mockGuest'
+import { enableGuestMode, disableGuestMode } from '~data/modules/mockGuest'
 import t from '~t'
 import sessionStorage from '~modules/sessionStorage'
 
@@ -20,8 +20,8 @@ export default function AccountLogin() {
     const [password, setPassword] = useState('')
     const [submitting, setSubmitting] = useState(false)
     const [submitError, setSubmitError] = useState('')
-    const [showTokenInput, setShowTokenInput] = useState(false)
     const [apiToken, setApiToken] = useState('')
+    const [showEmailLogin, setShowEmailLogin] = useState(false)
     const [search] = useSearchParams()
     const redirect = sessionStorage.getItem('redirect') || ''
 
@@ -38,6 +38,7 @@ export default function AccountLogin() {
         setSubmitting(true)
         setSubmitError('')
 
+        disableGuestMode()
         dispatch(loginWithPassword({ email, password }, ()=>{
             setSubmitting(false)
             navigate(redirect || '/my/0')
@@ -63,6 +64,7 @@ export default function AccountLogin() {
         setSubmitting(true)
         setSubmitError('')
         try {
+            disableGuestMode()
             window.localStorage.setItem('raindrop_token', cleanToken)
             dispatch(refresh())
             navigate(redirect || '/my/0')
@@ -74,38 +76,102 @@ export default function AccountLogin() {
         }
     }, [apiToken, dispatch, navigate, redirect])
 
+    const onSocialClick = useCallback((vendor)=>{
+        setSubmitError(`To sync your ${vendor === 'google' ? 'Google' : 'Apple'} Raindrop account to this app, please paste your Raindrop API Test Token using the 3 steps below.`)
+    }, [])
+
     return (
-        <form onSubmit={onSubmit}>
+        <form onSubmit={onTokenSubmit}>
             <Helmet><title>{t.s('signIn')}</title></Helmet>
 
             <Layout>
-                {/* 1-Click Instant Demo Button */}
-                <Button
-                    type='button'
-                    variant='primary'
-                    data-block
-                    style={{ marginBottom: '14px', background: '#007aff', fontWeight: 600, fontSize: '13px' }}
-                    onClick={handleInstantLogin}>
-                    🚀 1-Click Instant Demo (Photos & Duplicates)
-                </Button>
+                {/* 1. Real Account Sync (Primary Option) */}
+                <div style={{
+                    background: 'var(--background-secondary, rgba(0,0,0,0.03))',
+                    padding: '16px',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(0, 122, 255, 0.25)',
+                    marginBottom: '14px'
+                }}>
+                    <div style={{ fontWeight: 700, fontSize: '15px', color: '#007aff', marginBottom: '4px' }}>
+                        🔑 Sync Real Bookmarks (Google / Raindrop)
+                    </div>
+                    <p style={{ fontSize: '13px', margin: '0 0 10px 0', opacity: 0.85, lineHeight: 1.5 }}>
+                        To load all your real bookmarks from your Google email or Raindrop account:
+                    </p>
+                    
+                    <ol style={{ fontSize: '12px', paddingLeft: '18px', margin: '0 0 12px 0', lineHeight: 1.6 }}>
+                        <li>
+                            <a
+                                href='https://app.raindrop.io/settings/integrations'
+                                target='_blank'
+                                rel='noreferrer'
+                                style={{ fontWeight: 600, color: '#007aff' }}>
+                                1. Open Raindrop Settings → Integrations ↗
+                            </a>
+                        </li>
+                        <li>Scroll down to <strong>For Developers</strong> and click <strong>Create test token</strong></li>
+                        <li>Copy and paste your token below:</li>
+                    </ol>
 
-                <Separator />
+                    <Text
+                        type='text'
+                        autoFocus
+                        placeholder='Paste your Raindrop Test Token'
+                        value={apiToken}
+                        onChange={e=>setApiToken(e.target.value)} />
+
+                    <Button
+                        type='button'
+                        variant='primary'
+                        data-block
+                        style={{ marginTop: '10px', background: '#007aff', fontWeight: 600 }}
+                        disabled={submitting}
+                        onClick={onTokenSubmit}>
+                        {submitting ? 'Connecting…' : '✨ Connect & Load Real Bookmarks'}
+                    </Button>
+                </div>
 
                 {error ? (
                     <Alert variant='danger'>{error}</Alert>
                 ) : null}
 
                 {submitError ? (
-                    <Alert variant='danger'>{submitError}</Alert>
+                    <Alert variant='info'>{submitError}</Alert>
                 ) : null}
 
-                {!showTokenInput ? (
-                    <>
+                {/* Continue with Google / Apple buttons */}
+                <Social onVendorClick={onSocialClick} />
+
+                <Separator />
+
+                {/* 2. Sample Demo Option */}
+                <Button
+                    type='button'
+                    variant='outline'
+                    data-block
+                    style={{ marginBottom: '10px', fontWeight: 500 }}
+                    onClick={handleInstantLogin}>
+                    🚀 Preview Demo Account (Sample Bookmarks)
+                </Button>
+
+                {/* 3. Traditional Email / Password Login */}
+                <div style={{ textAlign: 'center', marginTop: '6px' }}>
+                    <Button
+                        type='button'
+                        variant='link'
+                        size='small'
+                        onClick={()=>setShowEmailLogin(!showEmailLogin)}>
+                        {showEmailLogin ? 'Hide Email & Password Form' : 'Log in with Email & Password instead'}
+                    </Button>
+                </div>
+
+                {showEmailLogin ? (
+                    <div style={{ marginTop: '14px', borderTop: '1px solid rgba(0,0,0,0.08)', paddingTop: '14px' }}>
                         <Label>{t.s('emailOrUsername')}</Label>
                         <Text
                             type='text'
                             name='email'
-                            autoFocus
                             required
                             inputMode='email'
                             autoCapitalize='none'
@@ -127,78 +193,19 @@ export default function AccountLogin() {
                         <Text
                             type='password'
                             name='password'
-                            required
                             value={password}
                             onChange={onChangePasswordField} />
 
                         <Button
-                            as='button'
-                            type='submit'
-                            variant='primary'
-                            disabled={submitting}
-                            data-block>
-                            {submitting ? 'Signing in…' : t.s('signIn')}
-                        </Button>
-
-                        <div style={{ textAlign: 'center', marginTop: '10px' }}>
-                            <Button
-                                type='button'
-                                variant='link'
-                                size='small'
-                                onClick={()=>setShowTokenInput(true)}>
-                                Or connect using Raindrop API Token ↗
-                            </Button>
-                        </div>
-
-                        <Social />
-
-                        <Button
-                            as={Link}
-                            to='/account/signup'
-                            variant='link'
-                            data-block>
-                            {t.s('register')}
-                        </Button>
-                    </>
-                ) : (
-                    <>
-                        <Label>
-                            Raindrop API Test Token
-                            <a
-                                href='https://app.raindrop.io/settings/integrations'
-                                target='_blank'
-                                rel='noreferrer'
-                                style={{ fontSize: '0.85em', float: 'right' }}>
-                                Get token ↗
-                            </a>
-                        </Label>
-                        <Text
-                            type='text'
-                            autoFocus
-                            placeholder='Paste your Raindrop Test Token'
-                            value={apiToken}
-                            onChange={e=>setApiToken(e.target.value)} />
-
-                        <Button
                             type='button'
                             variant='primary'
-                            data-block
                             disabled={submitting}
-                            onClick={onTokenSubmit}>
-                            {submitting ? 'Connecting…' : 'Connect Account with Token'}
+                            data-block
+                            onClick={onSubmit}>
+                            {submitting ? 'Signing in…' : t.s('signIn')}
                         </Button>
-
-                        <div style={{ textAlign: 'center', marginTop: '10px' }}>
-                            <Button
-                                type='button'
-                                variant='link'
-                                size='small'
-                                onClick={()=>setShowTokenInput(false)}>
-                                ← Back to Email & Password
-                            </Button>
-                        </div>
-                    </>
-                )}
+                    </div>
+                ) : null}
             </Layout>
         </form>
     )
