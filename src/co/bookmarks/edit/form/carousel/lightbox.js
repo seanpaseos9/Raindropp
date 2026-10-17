@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import ReactDOM from 'react-dom'
 import s from './lightbox.module.styl'
 import StarRating from './rating'
+import { handleImageLoadError } from './helper'
 
 export default function Lightbox({ images = [], initialIndex = 0, onClose, onUpdateRating, onUpdateCaption }) {
     const [index, setIndex] = useState(initialIndex)
@@ -273,15 +274,12 @@ export default function Lightbox({ images = [], initialIndex = 0, onClose, onUpd
                         src={current.url}
                         alt={current.caption || current.title || 'Note Image'}
                         className={s.image}
+                        referrerPolicy='no-referrer'
                         style={{
                             transform: `translate3d(${offset.x}px, ${offset.y}px, 0) scale(${zoom})`,
                             cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in'
                         }}
-                        onError={(e) => {
-                            if (current.fallbackUrl && e.target.src !== current.fallbackUrl) {
-                                e.target.src = current.fallbackUrl
-                            }
-                        }}
+                        onError={(e) => handleImageLoadError(e, current)}
                     />
                 </div>
 

@@ -16,7 +16,7 @@ import { PreloadPreviewLink } from '~routes/my/item/tab/preview'
 
 export default function BookmarkItemView(props) {
     const { innerRef, isDragging } = props
-    const { _id, link, title, excerpt, highlight, cover, domain, tags, note, highlights, reminder, view, access, spaceId } = props
+    const { _id, link, title, excerpt, highlight, cover, domain, tags, note, highlights, reminder, view, access, spaceId, rating = 0 } = props
     const { active, selected, selectModeEnabled, selectDisabled, important, broken, coverSize } = props
     const { onClick, onDoubleClick, onSelectClick, onContextMenu, onKeyUp } = props
 
@@ -65,6 +65,13 @@ export default function BookmarkItemView(props) {
                         <Highlights className={s.highlights} highlights={highlights} />
                         <Tags tags={tags} spaceId={spaceId} />
                     </div>
+
+                    {rating > 0 ? (
+                        <div className={s.ratingBadge} title={`Rating: ${rating}/5`}>
+                            <span className={s.ratingStars}>{'★'.repeat(rating)}{'☆'.repeat(5 - rating)}</span>
+                            <span className={s.ratingScore}>{rating}/5</span>
+                        </div>
+                    ) : null}
 
                     {/* Info */}
                     <Info 

@@ -13,6 +13,7 @@ import Title from './title'
 import Link from './link'
 import Reminder from './reminder'
 import Important from './important'
+import Rating from './rating'
 import Date from './date'
 
 export default function BookmarkEditForm(props) {
@@ -47,6 +48,7 @@ export default function BookmarkEditForm(props) {
                 <Collection {...props} />
                 <Tags {...props} />
                 <Link {...props} />
+                <Rating {...props} />
 
                 <div />
                 <Group>

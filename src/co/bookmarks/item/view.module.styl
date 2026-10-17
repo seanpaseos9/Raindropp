@@ -267,3 +267,27 @@
         }
     }
 }
+
+.ratingBadge {
+    display: inline-flex
+    align-items: center
+    gap: 5px
+    margin-top: 2px
+    margin-bottom: 2px
+    font-size: 11px
+    color: #ffaa00
+    line-height: 1
+    user-select: none
+
+    .ratingStars {
+        letter-spacing: 1px
+        font-size: 12px
+        filter: drop-shadow(0 1px 2px rgba(255, 170, 0, 0.25))
+    }
+
+    .ratingScore {
+        font-weight: 600
+        opacity: 0.85
+        font-size: 10px
+    }
+}

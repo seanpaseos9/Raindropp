@@ -1,0 +1,64 @@
+.ratingContainer {
+    display: flex
+    align-items: center
+    gap: 8px
+    padding: 3px 0
+}
+
+.starGroup {
+    display: inline-flex
+    align-items: center
+    gap: 4px
+}
+
+.starBtn {
+    appearance: none
+    background: transparent
+    border: none
+    outline: none
+    padding: 0
+    margin: 0
+    font-size: 20px
+    line-height: 1
+    cursor: pointer
+    transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.15s ease
+    color: var(--secondary-text-color)
+    opacity: 0.35
+
+    &:hover {
+        transform: scale(1.25)
+    }
+
+    &.filled {
+        color: #ffaa00
+        opacity: 1
+        filter: drop-shadow(0 1px 3px rgba(255, 170, 0, 0.3))
+    }
+}
+
+.scoreLabel {
+    font-size: 13px
+    font-weight: 500
+    color: var(--secondary-text-color)
+    margin-left: 2px
+}
+
+.clearBtn {
+    appearance: none
+    background: transparent
+    border: none
+    cursor: pointer
+    font-size: 11px
+    color: var(--secondary-text-color)
+    opacity: 0.5
+    padding: 2px 6px
+    border-radius: 4px
+    margin-left: 4px
+    transition: opacity 0.15s ease, background-color 0.15s ease
+
+    &:hover {
+        opacity: 1
+        background-color: var(--hover-background-color)
+        color: var(--danger-color, #ff3b30)
+    }
+}

@@ -16,8 +16,9 @@ import {
     updateImageRatingInNote 
 } from './carousel/helper'
 
-export default function BookmarkEditFormNote({ autoFocus, item: { note = '' }, onCommit, onChange, onSave }) {    
+export default function BookmarkEditFormNote({ autoFocus, item = {}, onCommit, onChange, onSave }) {    
     const [editingRaw, setEditingRaw] = useState(autoFocus === 'note')
+    const note = item.note || ''
 
     // Always keep a ref to the latest note to avoid stale closures during rapid or sequential additions
     const noteRef = useRef(note)
@@ -25,10 +26,10 @@ export default function BookmarkEditFormNote({ autoFocus, item: { note = '' }, o
         noteRef.current = note
     }, [note])
 
-    // Parse image links, titles, captions, and ratings from note
+    // Parse image links, titles, captions, and ratings from note and attached bookmark item
     const { hasImages, images, cleanText } = useMemo(() => {
-        return extractImageUrls(note || '')
-    }, [note])
+        return extractImageUrls(note || '', item)
+    }, [note, item])
 
     const onChangeField = useCallback(e => {
         const val = e.target.value

@@ -18,7 +18,8 @@ const DEFAULT_BOOKMARKS = [
         type: 'link',
         created: new Date().toISOString(),
         tags: ['nature', 'wallpaper', 'photography'],
-        media: []
+        media: [],
+        rating: 5
     },
     {
         _id: 102,
@@ -32,7 +33,8 @@ const DEFAULT_BOOKMARKS = [
         type: 'link',
         created: new Date().toISOString(),
         tags: ['design', 'ui', 'ux'],
-        media: []
+        media: [],
+        rating: 4
     },
     {
         _id: 103,
@@ -46,7 +48,8 @@ const DEFAULT_BOOKMARKS = [
         type: 'link',
         created: new Date().toISOString(),
         tags: ['travel', 'photos'],
-        media: []
+        media: [],
+        rating: 5
     }
 ]
 
@@ -182,7 +185,8 @@ export function handleGuestRequest(path = '', options = {}) {
             type: body.type || 'link',
             created: new Date().toISOString(),
             tags: body.tags || [],
-            media: body.media || []
+            media: body.media || [],
+            rating: body.rating || 0
         }
         items.unshift(newItem)
         saveGuestBookmarks(items)

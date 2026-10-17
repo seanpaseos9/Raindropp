@@ -24,6 +24,12 @@ export default function BookmarkItemInfo(props) {
                 <section><Path {...props} /></section>
             ) : null}
 
+            {props.rating > 0 ? (
+                <section data-inline className={s.ratingLabel} title={`Rating: ${props.rating}/5`}>
+                    <span className={s.ratingStar}>★</span> {props.rating}
+                </section>
+            ) : null}
+
             {important ? (
                 <section data-inline className={s.importantLabel}>
                     <Icon name='important_active' size='micro' />

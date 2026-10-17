@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react'
 import s from './index.module.styl'
 import Lightbox from './lightbox'
 import StarRating from './rating'
-import { formatMultipleImageEntries } from './helper'
+import { formatMultipleImageEntries, handleImageLoadError } from './helper'
 
 export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCaption, onUpdateRating }) {
     const [activeIndex, setActiveIndex] = useState(0)
@@ -331,11 +331,8 @@ export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCap
                                     alt={item.caption || item.title || `Photo ${idx + 1}`}
                                     className={s.image}
                                     loading='lazy'
-                                    onError={(e) => {
-                                        if (item.fallbackUrl && e.target.src !== item.fallbackUrl) {
-                                            e.target.src = item.fallbackUrl
-                                        }
-                                    }}
+                                    referrerPolicy='no-referrer'
+                                    onError={(e) => handleImageLoadError(e, item)}
                                 />
 
                                 {/* Caption & Rating Overlay Bar */}
