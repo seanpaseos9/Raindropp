@@ -1,7 +1,14 @@
 const path = require('path')
 const webpack = require('webpack')
 const { merge } = require('webpack-merge')
-const common = require('./common')
+let common
+try {
+    common = require('./common')
+} catch (e) {
+    console.warn('build/common.js was missing; regenerating...')
+    require('child_process').execSync('node -e "require(\'fs\').writeFileSync(\'build/common.js\', \'module.exports = require(\\\\\'./web\\\\\')\')"')
+    common = require('./common')
+}
 
 const WebpackPwaManifest = require('webpack-pwa-manifest')
 const CopyPlugin = require('copy-webpack-plugin')

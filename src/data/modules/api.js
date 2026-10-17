@@ -141,15 +141,37 @@ function* req(url, options={}, retries=0) {
 	throw new ApiError({ status, errorMessage: `${errorMessage} ${finalURL}` })
 }
 
-const fetchWrap = (url, options)=>(
-	fetch(url, options)
+import { isGuestMode, handleGuestRequest } from './mockGuest'
+
+const fetchWrap = (url, options)=>{
+	if (isGuestMode()) {
+		const mockResult = handleGuestRequest(url, options)
+		return Promise.resolve({
+			ok: true,
+			status: 200,
+			json: () => Promise.resolve(mockResult),
+			text: () => Promise.resolve(JSON.stringify(mockResult))
+		})
+	}
+
+	let token
+	try {
+		token = typeof window !== 'undefined' && window.localStorage ? window.localStorage.getItem('raindrop_token') : null
+	} catch (e) {}
+
+	const headers = {
+		...(options.headers || {}),
+		...(token ? { 'Authorization': `Bearer ${token}` } : {})
+	}
+
+	return fetch(url, { ...options, headers })
 		.then((res)=>{
 			if (res.status >= 200 && res.status < 300)
 				return res
 			else
 				throw new ApiError({ status: res.status, errorMessage: 'fail_fetch_status' })
 		})
-)
+}
 
 const checkJSON = (json)=>{
 	if (typeof json.auth === 'boolean')

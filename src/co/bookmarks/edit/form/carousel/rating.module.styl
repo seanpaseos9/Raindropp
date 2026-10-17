@@ -1,0 +1,66 @@
+.starGroup {
+    display: inline-flex
+    align-items: center
+    gap: 2px
+    user-select: none
+    line-height: 1
+}
+
+.starBtn {
+    background: none
+    border: none
+    padding: 2px
+    cursor: pointer
+    line-height: 1
+    display: inline-flex
+    align-items: center
+    justify-content: center
+    transition: transform 0.12s ease, color 0.12s ease
+    color: rgba(255, 255, 255, 0.35)
+
+    &:hover:not(:disabled) {
+        transform: scale(1.22)
+    }
+
+    &:active:not(:disabled) {
+        transform: scale(0.9)
+    }
+
+    &:disabled {
+        cursor: default
+    }
+}
+
+.starFilled {
+    color: #ffb400
+    text-shadow: 0 0 6px rgba(255, 180, 0, 0.6)
+}
+
+.starEmpty {
+    color: rgba(255, 255, 255, 0.3)
+}
+
+.lightTheme {
+    .starEmpty {
+        color: rgba(0, 0, 0, 0.22)
+    }
+}
+
+.small {
+    font-size: 13px
+}
+
+.medium {
+    font-size: 17px
+}
+
+.large {
+    font-size: 22px
+}
+
+.ratingText {
+    font-size: 11px
+    font-weight: 600
+    margin-left: 4px
+    color: #ffb400
+}

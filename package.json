@@ -7,6 +7,8 @@
 	"main": "index.js",
 	"sideEffects": false,
 	"scripts": {
+		"dev": "webpack serve --config build/web.js",
+		"lint": "eslint src/co/bookmarks/edit/form/carousel --ext .js",
 		"local": "webpack serve --config build/web.js",
 		"local:extension:chrome": "webpack serve --config build/extension.js --env vendor=chrome",
 		"local:extension:opera": "webpack serve --config build/extension.js --env vendor=opera",

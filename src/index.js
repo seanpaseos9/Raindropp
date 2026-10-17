@@ -1,3 +1,18 @@
+// Suppress benign ResizeObserver notification errors that trigger Webpack overlay
+if (typeof window !== 'undefined') {
+	window.addEventListener('error', (e) => {
+		if (
+			e &&
+			typeof e.message === 'string' &&
+			(e.message.includes('ResizeObserver loop completed with undelivered notifications') ||
+				e.message.includes('ResizeObserver loop limit exceeded'))
+		) {
+			e.stopImmediatePropagation()
+			e.preventDefault()
+		}
+	})
+}
+
 //react
 import './wdyr'
 import React from 'react'

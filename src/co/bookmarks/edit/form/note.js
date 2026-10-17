@@ -1,32 +1,27 @@
 import s from './note.module.styl'
 import t from '~t'
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import links from '~config/links'
 
 import { Text, Label } from '~co/common/form'
 import Icon from '~co/common/icon'
 import Button from '~co/common/button'
 import { Confirm } from '~co/overlay/dialog'
-import SafeMarkdown from '~co/common/safeMarkdown'
 
-import { extractImageLinks } from './carousel/extractImageLinks'
-import NoteCarousel from './carousel'
-import Lightbox from './carousel/lightbox'
+import NoteImageCarousel from './carousel'
+import { extractImageUrls, formatImageNoteEntry, updateImageCaptionInNote, updateImageRatingInNote } from './carousel/helper'
 
-export default function BookmarkEditFormNote({ autoFocus, item: { note = '' }, onCommit, onChange }) {
-    // Extract image links and clean note text
-    const { images, cleanText, hasImages } = useMemo(() => extractImageLinks(note), [note])
+export default function BookmarkEditFormNote({ autoFocus, item: { note = '' }, onCommit, onChange }) {    
+    const [editingRaw, setEditingRaw] = useState(autoFocus === 'note')
 
-    // Lightbox modal state
-    const [lightboxIndex, setLightboxIndex] = useState(null)
+    // Parse image links, titles, captions, and ratings from note
+    const { hasImages, images, cleanText } = useMemo(() => {
+        return extractImageUrls(note || '')
+    }, [note])
 
-    // Editing mode state (when images are present, allow toggling between clean view and raw editing)
-    const [isEditing, setIsEditing] = useState(() => autoFocus === 'note')
-
-    const onChangeField = useCallback(e =>
-        onChange({ [e.target.getAttribute('name')]: e.target.value }),
-        [onChange]
-    )
+    const onChangeField = useCallback(e => {
+        onChange({ [e.target.getAttribute('name')]: e.target.value })
+    }, [onChange])
 
     const onMarkdownClick = useCallback(e => {
         e.preventDefault()
@@ -34,142 +29,122 @@ export default function BookmarkEditFormNote({ autoFocus, item: { note = '' }, o
             description: t.s('markdownSupported'),
             cancel: t.s('howToUse')
         }).then(ok => {
-            if (!ok)
-                window.open(links.help['add-note'])
+            if (!ok) window.open(links.help['add-note'])
         })
     }, [])
 
-    const handleStartEditing = useCallback(() => {
-        setIsEditing(true)
-    }, [])
+    const handleBlur = useCallback((e) => {
+        onCommit && onCommit(e)
+        if (hasImages) {
+            setEditingRaw(false)
+        }
+    }, [onCommit, hasImages])
 
-    const handleFinishEditing = useCallback(() => {
-        setIsEditing(false)
+    // Add image with optional caption and rating
+    const onAddImage = useCallback((url, caption = '', rating = 0) => {
+        const entry = formatImageNoteEntry(url, caption, rating)
+        if (!entry) return
+        const newNote = note ? `${note.trim()}\n${entry}` : entry
+        onChange({ note: newNote })
         onCommit && onCommit()
-    }, [onCommit])
+    }, [note, onChange, onCommit])
 
-    // Standard plain-text note (when no image links detected in note)
-    if (!hasImages) {
-        return (
-            <>
-                <Label>{t.s('note')}</Label>
-                <Text 
-                    className={s.note}
-                    type='text'
-                    autoFocus={autoFocus === 'note'}
-                    name='note'
-                    value={note}
-                    autoSize={true}
-                    multiline={true}
-                    minRows={3}
-                    onChange={onChangeField}
-                    onBlur={onCommit}>
-                    <Button 
-                        className={s.button} 
-                        onClick={onMarkdownClick}
-                        tabIndex='-1'
-                        size='small'
-                        title={t.s('markdownSupported')}>
-                        <Icon name='markdown' />
-                    </Button>
-                </Text>
-            </>
-        )
-    }
+    // Update caption of an existing image
+    const onUpdateCaption = useCallback((image, newCaption) => {
+        const newNote = updateImageCaptionInNote(note, image, newCaption)
+        onChange({ note: newNote })
+        onCommit && onCommit()
+    }, [note, onChange, onCommit])
 
-    // Bookmark note with image links: carousel + clean/collapsed note body + lightbox
+    // Update star rating of an existing image
+    const onUpdateRating = useCallback((image, newRating) => {
+        const newNote = updateImageRatingInNote(note, image, newRating)
+        onChange({ note: newNote })
+        onCommit && onCommit()
+    }, [note, onChange, onCommit])
+
+    const handlePromptAddImage = useCallback(() => {
+        const url = window.prompt('Paste an image URL or Google Drive share link:')
+        if (url) {
+            const caption = window.prompt('Optional title or caption for this image:') || ''
+            onAddImage(url, caption)
+        }
+    }, [onAddImage])
+
     return (
         <>
+            {/* Standard label to keep grid alignment intact */}
             <Label>{t.s('note')}</Label>
-            
+
             <div className={s.noteContainer}>
-                {/* Touch-swipeable horizontal image carousel */}
-                <NoteCarousel 
-                    images={images} 
-                    onOpenLightbox={setLightboxIndex} 
-                />
+                {/* Note actions toolbar */}
+                <div className={s.topBar}>
+                    <button
+                        type='button'
+                        className={s.actionBtn}
+                        onClick={handlePromptAddImage}
+                        title='Attach an image link with optional title'>
+                        ➕ Add Image
+                    </button>
+                    {hasImages && (
+                        <button
+                            type='button'
+                            className={s.actionBtn}
+                            onClick={() => setEditingRaw(prev => !prev)}>
+                            {editingRaw ? '✓ Done Editing' : '✏️ Edit Raw Note'}
+                        </button>
+                    )}
+                </div>
 
-                {/* Note Body: Clean preview or editable Textarea */}
-                {!isEditing ? (
+                {/* Touch-swipeable carousel with captions and smooth scrolling */}
+                {hasImages && (
+                    <NoteImageCarousel 
+                        images={images} 
+                        onAddImage={onAddImage}
+                        onUpdateCaption={onUpdateCaption}
+                        onUpdateRating={onUpdateRating} />
+                )}
+
+                {/* Note text field */}
+                {hasImages && !editingRaw ? (
                     <div 
-                        className={s.cleanCard} 
-                        onClick={handleStartEditing}
-                        title='Click to edit note'>
+                        className={s.cleanNoteCard}
+                        onClick={() => setEditingRaw(true)}
+                        title='Click to edit note text'>
                         {cleanText ? (
-                            <SafeMarkdown className={s.cleanBody} markdown={cleanText} />
+                            cleanText
                         ) : (
-                            <div className={s.placeholder}>{t.s('addNote')}…</div>
-                        )}
-
-                        <div className={s.metaRow}>
-                            <span className={s.urlBadge} title='Image URLs are collapsed and displayed in the carousel above'>
-                                <svg viewBox='0 0 24 24'>
-                                    <path d='M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z' />
-                                </svg>
-                                {images.length} {images.length === 1 ? 'image' : 'images'} in carousel
+                            <span className={s.emptyCleanText}>
+                                (Images only in note — click here to add text)
                             </span>
-
-                            <button 
-                                type='button' 
-                                className={s.editActionBtn}
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleStartEditing()
-                                }}>
-                                <Icon name='edit' size='micro' />
-                                <span>{t.s('edit')}</span>
-                            </button>
+                        )}
+                        <div className={s.collapsedBanner}>
+                            <span>📷 {images.length} {images.length === 1 ? 'image' : 'images'} attached with captions</span>
+                            <span className={s.inlineEditBtn}>Click to edit text</span>
                         </div>
                     </div>
                 ) : (
-                    <div>
-                        <Text 
-                            className={s.note}
-                            type='text'
-                            autoFocus={true}
-                            name='note'
-                            value={note}
-                            autoSize={true}
-                            multiline={true}
-                            minRows={3}
-                            onChange={onChangeField}
-                            onBlur={handleFinishEditing}>
-                            <Button 
-                                className={s.button} 
-                                onClick={onMarkdownClick}
-                                tabIndex='-1'
-                                size='small'
-                                title={t.s('markdownSupported')}>
-                                <Icon name='markdown' />
-                            </Button>
-                        </Text>
-
-                        <div className={s.editingBar}>
-                            <span className={s.urlBadge}>
-                                📷 {images.length} {images.length === 1 ? 'image' : 'images'} detected
-                            </span>
-
-                            <button 
-                                type='button' 
-                                className={s.doneBtn}
-                                onMouseDown={(e) => {
-                                    // Prevent blur before click executes
-                                    e.preventDefault()
-                                    handleFinishEditing()
-                                }}>
-                                Done
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Full-screen Lightbox Overlay */}
-                {lightboxIndex !== null && (
-                    <Lightbox 
-                        images={images} 
-                        initialIndex={lightboxIndex} 
-                        onClose={() => setLightboxIndex(null)} 
-                    />
+                    <Text 
+                        className={s.note}
+                        type='text'
+                        autoFocus={autoFocus === 'note' || editingRaw}
+                        name='note'
+                        value={note}
+                        autoSize={true}
+                        multiline={true}
+                        minRows={3}
+                        placeholder={t.s('note')}
+                        onChange={onChangeField}
+                        onBlur={handleBlur}>
+                        <Button 
+                            className={s.button} 
+                            onClick={onMarkdownClick}
+                            tabIndex='-1'
+                            size='small'
+                            title={t.s('markdownSupported')}>
+                            <Icon name='markdown' />
+                        </Button>
+                    </Text>
                 )}
             </div>
         </>

@@ -203,6 +203,10 @@ function* logout({ ignore=false, all=false }) {
 		return;
 
 	try {
+		try { 
+			window.localStorage.removeItem('raindrop_token')
+			window.localStorage.removeItem('guest_mode')
+		} catch(e) {}
 		yield call(Api.get, 'auth/logout?no_redirect&'+(all===true?'all':''))
 		yield put({type: 'RESET'})
 		yield put({type: USER_NOT_AUTHORIZED})

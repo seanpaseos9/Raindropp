@@ -1,290 +1,290 @@
-import s from './lightbox.module.styl'
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { Portal } from 'react-portal'
+import ReactDOM from 'react-dom'
+import s from './lightbox.module.styl'
+import StarRating from './rating'
 
-export default function Lightbox({ images = [], initialIndex = 0, onClose }) {
+export default function Lightbox({ images = [], initialIndex = 0, onClose, onUpdateRating }) {
     const [index, setIndex] = useState(initialIndex)
-    const [isZoomed, setIsZoomed] = useState(false)
-    const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
+    const [zoom, setZoom] = useState(1)
+    const [offset, setOffset] = useState({ x: 0, y: 0 })
     const [isDragging, setIsDragging] = useState(false)
-    const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-    const [loading, setLoading] = useState(true)
-    const [hasError, setHasError] = useState(false)
-    const [currentSrc, setCurrentSrc] = useState('')
+    const dragStartRef = useRef({ x: 0, y: 0 })
+    const touchStartRef = useRef({ x: 0, y: 0, time: 0 })
 
     const total = images.length
-    const currentImage = images[index] || {}
+    const current = images[index] || {}
 
-    // Reset zoom and pan on slide change
+    // Reset zoom when switching images
     useEffect(() => {
-        setIsZoomed(false)
-        setPanOffset({ x: 0, y: 0 })
-        setLoading(true)
-        setHasError(false)
-        setCurrentSrc(currentImage.url || '')
-    }, [index, currentImage.url])
+        setZoom(1)
+        setOffset({ x: 0, y: 0 })
+    }, [index])
 
-    const nextSlide = useCallback(() => {
-        if (total <= 1) return
-        setIndex(i => (i + 1) % total)
+    const goPrev = useCallback((e) => {
+        if (e) e.stopPropagation()
+        setIndex(i => (i > 0 ? i - 1 : total - 1))
     }, [total])
 
-    const prevSlide = useCallback(() => {
-        if (total <= 1) return
-        setIndex(i => (i - 1 + total) % total)
+    const goNext = useCallback((e) => {
+        if (e) e.stopPropagation()
+        setIndex(i => (i < total - 1 ? i + 1 : 0))
     }, [total])
 
-    const toggleZoom = useCallback((e) => {
-        if (e && e.stopPropagation) e.stopPropagation()
-        setIsZoomed(z => {
-            if (z) setPanOffset({ x: 0, y: 0 })
-            return !z
+    const zoomIn = useCallback((e) => {
+        if (e) e.stopPropagation()
+        setZoom(z => Math.min(3, +(z + 0.5).toFixed(1)))
+    }, [])
+
+    const zoomOut = useCallback((e) => {
+        if (e) e.stopPropagation()
+        setZoom(z => {
+            const next = Math.max(1, +(z - 0.5).toFixed(1))
+            if (next === 1) setOffset({ x: 0, y: 0 })
+            return next
         })
+    }, [])
+
+    const resetZoom = useCallback((e) => {
+        if (e) e.stopPropagation()
+        setZoom(1)
+        setOffset({ x: 0, y: 0 })
     }, [])
 
     // Keyboard navigation
     useEffect(() => {
-        const handleKeyDown = (e) => {
+        const onKeyDown = (e) => {
             if (e.key === 'Escape') {
-                e.preventDefault()
-                onClose && onClose()
-            } else if (e.key === 'ArrowRight') {
-                e.preventDefault()
-                nextSlide()
+                onClose()
             } else if (e.key === 'ArrowLeft') {
-                e.preventDefault()
-                prevSlide()
+                goPrev()
+            } else if (e.key === 'ArrowRight') {
+                goNext()
+            } else if (e.key === '+' || e.key === '=') {
+                zoomIn()
+            } else if (e.key === '-') {
+                zoomOut()
             }
         }
+        window.addEventListener('keydown', onKeyDown)
+        return () => window.removeEventListener('keydown', onKeyDown)
+    }, [onClose, goPrev, goNext, zoomIn, zoomOut])
 
-        window.addEventListener('keydown', handleKeyDown)
-        return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [onClose, nextSlide, prevSlide])
-
-    // Lock body scroll while lightbox is open
-    useEffect(() => {
-        const originalOverflow = document.body.style.overflow
-        document.body.style.overflow = 'hidden'
-        return () => {
-            document.body.style.overflow = originalOverflow
-        }
-    }, [])
-
-    // Touch gesture handling: swipe to navigate or pull-down to close
-    const touchStartRef = useRef(null)
-
-    const onTouchStart = useCallback((e) => {
-        if (isZoomed) return
-        if (e.touches && e.touches.length === 1) {
+    // Touch events for swiping left/right
+    const onTouchStart = (e) => {
+        if (e.touches.length === 1) {
             touchStartRef.current = {
                 x: e.touches[0].clientX,
                 y: e.touches[0].clientY,
                 time: Date.now()
             }
+            if (zoom > 1) {
+                dragStartRef.current = {
+                    x: e.touches[0].clientX - offset.x,
+                    y: e.touches[0].clientY - offset.y
+                }
+            }
         }
-    }, [isZoomed])
+    }
 
-    const onTouchEnd = useCallback((e) => {
-        if (isZoomed || !touchStartRef.current) return
-        if (e.changedTouches && e.changedTouches.length === 1) {
+    const onTouchMove = (e) => {
+        if (zoom > 1 && e.touches.length === 1) {
+            setOffset({
+                x: e.touches[0].clientX - dragStartRef.current.x,
+                y: e.touches[0].clientY - dragStartRef.current.y
+            })
+        }
+    }
+
+    const onTouchEnd = (e) => {
+        if (zoom === 1 && e.changedTouches.length === 1) {
             const deltaX = e.changedTouches[0].clientX - touchStartRef.current.x
             const deltaY = e.changedTouches[0].clientY - touchStartRef.current.y
             const deltaTime = Date.now() - touchStartRef.current.time
 
-            // Horizontal swipe to navigate
             if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) && deltaTime < 400) {
                 if (deltaX < 0) {
-                    nextSlide()
+                    goNext()
                 } else {
-                    prevSlide()
+                    goPrev()
                 }
-            }
-            // Vertical swipe down to close
-            else if (deltaY > 80 && Math.abs(deltaY) > Math.abs(deltaX) * 1.5 && deltaTime < 500) {
-                onClose && onClose()
+            } else if (deltaY > 100 && Math.abs(deltaY) > Math.abs(deltaX) * 1.5) {
+                onClose()
             }
         }
-        touchStartRef.current = null
-    }, [isZoomed, nextSlide, prevSlide, onClose])
+    }
 
-    // Pan handling when zoomed
-    const onMouseDown = useCallback((e) => {
-        if (!isZoomed) return
-        setIsDragging(true)
-        setDragStart({
-            x: e.clientX - panOffset.x,
-            y: e.clientY - panOffset.y
-        })
-    }, [isZoomed, panOffset])
+    // Mouse drag for zoomed image
+    const onMouseDown = (e) => {
+        if (zoom > 1) {
+            e.preventDefault()
+            setIsDragging(true)
+            dragStartRef.current = {
+                x: e.clientX - offset.x,
+                y: e.clientY - offset.y
+            }
+        }
+    }
 
-    const onMouseMove = useCallback((e) => {
-        if (!isDragging || !isZoomed) return
-        setPanOffset({
-            x: e.clientX - dragStart.x,
-            y: e.clientY - dragStart.y
-        })
-    }, [isDragging, isZoomed, dragStart])
+    const onMouseMove = (e) => {
+        if (isDragging && zoom > 1) {
+            setOffset({
+                x: e.clientX - dragStartRef.current.x,
+                y: e.clientY - dragStartRef.current.y
+            })
+        }
+    }
 
-    const onMouseUp = useCallback(() => {
+    const onMouseUp = () => {
         setIsDragging(false)
-    }, [])
+    }
 
-    // Handle image load error: try fallback URL if available
-    const handleImageError = useCallback(() => {
-        if (currentImage.fallbackUrl && currentSrc !== currentImage.fallbackUrl) {
-            setCurrentSrc(currentImage.fallbackUrl)
-            setLoading(true)
+    // Double click to toggle zoom
+    const onDoubleClick = (e) => {
+        e.stopPropagation()
+        if (zoom > 1) {
+            resetZoom()
         } else {
-            setLoading(false)
-            setHasError(true)
+            setZoom(2)
         }
-    }, [currentImage.fallbackUrl, currentSrc])
+    }
 
-    const handleImageLoaded = useCallback(() => {
-        setLoading(false)
-        setHasError(false)
-    }, [])
+    if (typeof document === 'undefined') return null
 
-    return (
-        <Portal>
+    return ReactDOM.createPortal(
+        <div 
+            className={s.overlay} 
+            onClick={onClose}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}>
+            
+            {/* Top Bar */}
+            <div className={s.topbar} onClick={e => e.stopPropagation()}>
+                <div className={s.titleArea}>
+                    <span className={s.counter}>{index + 1} / {total}</span>
+                    <span className={s.alt} title={current.caption || current.title || current.url}>
+                        {current.caption ? `“${current.caption}”` : (current.title || current.source || 'Image')}
+                    </span>
+                    {/* Star Rating in Lightbox Header */}
+                    <div style={{ marginLeft: '8px' }}>
+                        <StarRating
+                            rating={current.rating || 0}
+                            size='small'
+                            showText={true}
+                            onChange={(score) => onUpdateRating && onUpdateRating(current, score)}
+                        />
+                    </div>
+                </div>
+
+                <div className={s.actions}>
+                    <a
+                        href={current.originalUrl || current.url}
+                        target='_blank'
+                        rel='noreferrer'
+                        className={s.toolButton}
+                        title='Open original in new tab'>
+                        ↗ Open Original
+                    </a>
+                    <button
+                        type='button'
+                        className={s.closeButton}
+                        onClick={onClose}
+                        title='Close (Esc)'>
+                        ✕
+                    </button>
+                </div>
+            </div>
+
+            {/* Main Stage */}
             <div 
-                className={s.overlay} 
-                onClick={onClose}
-                onTouchStart={onTouchStart}
-                onTouchEnd={onTouchEnd}
-                onMouseMove={onMouseMove}
-                onMouseUp={onMouseUp}>
-                
-                {/* Header bar */}
-                <div className={s.header} onClick={e => e.stopPropagation()}>
-                    <div className={s.counter}>
-                        <span>{index + 1} / {total}</span>
-                    </div>
+                className={s.body} 
+                onClick={e => {
+                    if (e.target === e.currentTarget && zoom === 1) onClose()
+                }}>
+                {total > 1 && (
+                    <button
+                        type='button'
+                        className={s.navPrev}
+                        onClick={goPrev}
+                        title='Previous Image'>
+                        ‹
+                    </button>
+                )}
 
-                    <div className={s.actions}>
-                        {/* Zoom toggle button */}
-                        <button 
-                            type='button' 
-                            className={`${s.btn} ${isZoomed ? s.btnActive : ''}`} 
-                            onClick={toggleZoom}
-                            title={isZoomed ? 'Zoom Out' : 'Zoom In'}>
-                            <svg viewBox='0 0 24 24'>
-                                {isZoomed ? (
-                                    <path d='M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM7 9h5v1H7z' />
-                                ) : (
-                                    <path d='M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zm.5-7v2h2v1h-2v2h-1v-2h-2V9h2V7h1z' />
-                                )}
-                            </svg>
-                        </button>
-
-                        {/* Open in new tab button */}
-                        <a 
-                            className={s.btn} 
-                            href={currentImage.originalUrl || currentSrc} 
-                            target='_blank' 
-                            rel='noopener noreferrer'
-                            title='Open image in new tab'
-                            onClick={e => e.stopPropagation()}>
-                            <svg viewBox='0 0 24 24'>
-                                <path d='M19 19H5V5h7V3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z' />
-                            </svg>
-                        </a>
-
-                        {/* Close button */}
-                        <button 
-                            type='button' 
-                            className={s.btn} 
-                            onClick={onClose}
-                            title='Close (Esc)'>
-                            <svg viewBox='0 0 24 24'>
-                                <path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z' />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                {/* Viewport Stage */}
                 <div 
-                    className={s.stage} 
-                    data-zoomed={isZoomed} 
-                    data-dragging={isDragging}
-                    onClick={e => {
-                        // Clicking stage background closes; clicking image toggles zoom
-                        if (e.target === e.currentTarget) {
-                            onClose && onClose()
-                        }
-                    }}>
-                    
-                    {/* Previous button */}
-                    {total > 1 && (
-                        <button 
-                            type='button' 
-                            className={`${s.navBtn} ${s.navPrev}`} 
-                            onClick={e => { e.stopPropagation(); prevSlide() }}
-                            title='Previous image (Left Arrow)'>
-                            <svg viewBox='0 0 24 24'>
-                                <path d='M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z' />
-                            </svg>
-                        </button>
-                    )}
-
-                    {/* Image or Loading / Error */}
-                    {loading && <div className={s.loadingSpinner} />}
-
-                    {hasError ? (
-                        <div className={s.errorState} onClick={e => e.stopPropagation()}>
-                            <p>Unable to load preview for this image.</p>
-                            <a 
-                                href={currentImage.originalUrl || currentSrc} 
-                                target='_blank' 
-                                rel='noopener noreferrer'>
-                                Open original link
-                            </a>
-                        </div>
-                    ) : (
-                        <div 
-                            className={s.imageWrap}
-                            onMouseDown={onMouseDown}
-                            onClick={toggleZoom}>
-                            <img
-                                key={currentSrc}
-                                className={s.image}
-                                src={currentSrc}
-                                alt={currentImage.alt || 'Bookmark image'}
-                                style={{
-                                    transform: isZoomed 
-                                        ? `scale(2.2) translate(${panOffset.x / 2.2}px, ${panOffset.y / 2.2}px)`
-                                        : 'none',
-                                    cursor: isZoomed ? 'grab' : 'zoom-in'
-                                }}
-                                onLoad={handleImageLoaded}
-                                onError={handleImageError}
-                                draggable={false}
-                            />
-                        </div>
-                    )}
-
-                    {/* Next button */}
-                    {total > 1 && (
-                        <button 
-                            type='button' 
-                            className={`${s.navBtn} ${s.navNext}`} 
-                            onClick={e => { e.stopPropagation(); nextSlide() }}
-                            title='Next image (Right Arrow)'>
-                            <svg viewBox='0 0 24 24'>
-                                <path d='M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z' />
-                            </svg>
-                        </button>
-                    )}
+                    className={s.stage}
+                    onMouseDown={onMouseDown}
+                    onDoubleClick={onDoubleClick}>
+                    <img
+                        key={current.url}
+                        src={current.url}
+                        alt={current.caption || current.title || 'Note Image'}
+                        className={s.image}
+                        style={{
+                            transform: `translate3d(${offset.x}px, ${offset.y}px, 0) scale(${zoom})`,
+                            cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in'
+                        }}
+                        onError={(e) => {
+                            if (current.fallbackUrl && e.target.src !== current.fallbackUrl) {
+                                e.target.src = current.fallbackUrl
+                            }
+                        }}
+                    />
                 </div>
 
-                {/* Footer caption */}
-                {currentImage.alt && currentImage.alt !== 'Bookmark image' && (
-                    <div className={s.footer} onClick={e => e.stopPropagation()}>
-                        <span className={s.altText}>{currentImage.alt}</span>
-                    </div>
+                {total > 1 && (
+                    <button
+                        type='button'
+                        className={s.navNext}
+                        onClick={goNext}
+                        title='Next Image'>
+                        ›
+                    </button>
                 )}
             </div>
-        </Portal>
+
+            {/* Bottom Controls */}
+            <div className={s.bottombar} onClick={e => e.stopPropagation()}>
+                <button
+                    type='button'
+                    className={s.toolButton}
+                    onClick={zoomOut}
+                    disabled={zoom <= 1}
+                    title='Zoom Out (-)'>
+                    −
+                </button>
+                <span className={s.zoomBadge}>{Math.round(zoom * 100)}%</span>
+                <button
+                    type='button'
+                    className={s.toolButton}
+                    onClick={zoomIn}
+                    disabled={zoom >= 3}
+                    title='Zoom In (+)'>
+                    +
+                </button>
+                {zoom > 1 && (
+                    <button
+                        type='button'
+                        className={s.toolButton}
+                        onClick={resetZoom}
+                        title='Reset Zoom'>
+                        Reset
+                    </button>
+                )}
+                {/* Interactive Star Rating in Bottombar */}
+                <div style={{ marginLeft: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '12px', opacity: 0.8 }}>Rate:</span>
+                    <StarRating
+                        rating={current.rating || 0}
+                        size='medium'
+                        showText={true}
+                        onChange={(score) => onUpdateRating && onUpdateRating(current, score)}
+                    />
+                </div>
+            </div>
+        </div>,
+        document.body
     )
 }

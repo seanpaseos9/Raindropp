@@ -7,10 +7,9 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin')
 const SentryCliPlugin = require('@sentry/webpack-plugin')
 
-//defaults
 process.env.SENTRY_RELEASE = String(new Date().getTime())
 
-module.exports = ({ production, filename='[name].[contenthash]', sentry={} }, { profile }) => ({
+module.exports = ({ production, filename='[name].[contenthash]', sentry={} }, { profile }={}) => ({
 	mode:		production ? 'production' : 'development',
 	context:	path.resolve(__dirname, '../src'),
 	devtool:	production ? 'source-map' : 'eval-cheap-module-source-map',
@@ -28,11 +27,21 @@ module.exports = ({ production, filename='[name].[contenthash]', sentry={} }, { 
 		compress: false,
 		allowedHosts: 'all',
 		historyApiFallback: true,
-		//hot: true,inline: true,
+		host: '0.0.0.0',
 		client: {
-			overlay: true,
+			overlay: false
 		},
-		port: 2000
+		port: 3000,
+		proxy: [
+			{
+				context: ['/v1'],
+				target: 'https://api.raindrop.io',
+				changeOrigin: true,
+				secure: true,
+				cookieDomainRewrite: '',
+				cookiePathRewrite: '/'
+			}
+		]
 	},
 
 	performance: {
@@ -86,19 +95,12 @@ module.exports = ({ production, filename='[name].[contenthash]', sentry={} }, { 
 	},
 
 	plugins: [
-		//pre plugins
-		...(production ? [
-		] : [
-		]),
-
-		//Sentry
 		...(production && process.env.SENTRY_AUTH_TOKEN && !sentry?.disabled ? [
 			new SentryCliPlugin({
 				org: 'oblako-corp',
 				project: 'app',
-				authToken: process.env.SENTRY_AUTH_TOKEN, //required in CI environment
+				authToken: process.env.SENTRY_AUTH_TOKEN,
 				release: process.env.SENTRY_RELEASE,
-
 				include: './src',
 				ignore: [ 'node_modules', 'build', 'dist' ],
 				configFile: path.resolve(__dirname, 'sentry.properties'),
@@ -112,7 +114,6 @@ module.exports = ({ production, filename='[name].[contenthash]', sentry={} }, { 
 			'process.env.SENTRY_RELEASE': JSON.stringify(production && !sentry?.disabled? process.env.SENTRY_RELEASE : undefined)
 		}),
 
-		//HTML
 		new HtmlWebpackPlugin({
 			title: 'Raindrop.io',
 			template: './index.ejs',
@@ -121,7 +122,6 @@ module.exports = ({ production, filename='[name].[contenthash]', sentry={} }, { 
 			excludeChunks: ['manifest', 'background']
 		}),
 
-		//CSS
 		new MiniCssExtractPlugin({
 			filename: `assets/${filename}.css`,
 			chunkFilename: `assets/${filename}.css`
