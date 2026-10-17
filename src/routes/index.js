@@ -16,8 +16,15 @@ import Settings from './settings'
 const Router = target == 'web' ? BrowserRouter : HashRouter
 
 export default function Pages() {
+    const basename = typeof window !== 'undefined' && (
+        window.location.pathname.startsWith('/Raindropp') ||
+        (process.env.PUBLIC_PATH && process.env.PUBLIC_PATH !== '/')
+    )
+        ? (process.env.PUBLIC_PATH && process.env.PUBLIC_PATH !== '/' ? process.env.PUBLIC_PATH.replace(/\/+$/, '') : '/Raindropp')
+        : undefined
+
     return (
-        <Router>
+        <Router basename={basename}>
             <Routes>
                 <Route index element={<Default />} />
 

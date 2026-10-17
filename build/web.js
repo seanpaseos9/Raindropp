@@ -48,7 +48,8 @@ module.exports = (env={}, args={}) =>
 
             plugins: [
                 new webpack.DefinePlugin({
-                    'process.env.APP_TARGET': JSON.stringify('web')
+                    'process.env.APP_TARGET': JSON.stringify('web'),
+                    'process.env.PUBLIC_PATH': JSON.stringify(process.env.PUBLIC_PATH || '/')
                 }),
 
                 //Service worker
