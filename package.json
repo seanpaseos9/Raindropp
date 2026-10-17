@@ -15,6 +15,8 @@
 		"local:electron": "webpack serve --config build/electron.js",
 		"local:prod": "npm run build && serve dist/web/prod -l 80",
 		"build": "webpack --config build/web.js --env production",
+		"postbuild": "node -e \"const fs = require('fs'); fs.cpSync('dist/web/prod', 'dist', { recursive: true, force: true }); fs.copyFileSync('dist/index.html', 'dist/404.html'); fs.copyFileSync('dist/web/prod/index.html', 'dist/web/prod/404.html');\"",
+		"start": "serve dist/web/prod -s -l 3000",
 		"build:extension": "npm run build:extension:chrome && npm run build:extension:edge && npm run build:extension:firefox && npm run build:extension:opera && npm run build:extension:safari && npm run build:extension:safari-ios",
 		"build:extension:chrome": "webpack --config build/extension.js --env production --env vendor=chrome",
 		"build:extension:edge": "webpack --config build/extension.js --env production --env vendor=edge",
@@ -29,6 +31,7 @@
 		"postinstall": "patch-package"
 	},
 	"dependencies": {
+		"serve": "^13.0.0",
 		"@juggle/resize-observer": "^3.3.0",
 		"@sentry/react": "^6.0.0",
 		"date-fns": "^2.28.0",
