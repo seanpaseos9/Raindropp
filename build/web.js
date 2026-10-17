@@ -19,7 +19,7 @@ module.exports = (env={}, args={}) =>
         {
             output: {
                 path: path.resolve(__dirname, '..', 'dist', 'web', env.production?'prod':'dev'),
-                publicPath: '/'
+                publicPath: process.env.PUBLIC_PATH || '/'
             },
 
             optimization: {
