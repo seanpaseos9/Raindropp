@@ -1,3 +1,5 @@
+import { normalizeBookmarkLink, findDuplicateBookmarks } from '../helpers/bookmarks/duplicates'
+
 /**
  * Mock guest storage and API responder for Instant Login / Guest Mode.
  * Ensures the app is 100% usable without hitting external API blocks or unauthorized errors.
@@ -6,44 +8,44 @@
 const DEFAULT_BOOKMARKS = [
     {
         _id: 101,
-        title: "Nature Photography & Scenic Wallpapers",
-        excerpt: "A curated collection of scenic landscapes, mountain ranges, and sunsets with attached photos.",
-        note: "Here are some of the best high-res wallpapers:\n![Mount Fuji Sunset](https://images.unsplash.com/photo-1578637387939-43c525550085?w=800 \"rating:5\")\n![Alps Mountain Range](https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800 \"rating:4\")\n![Tropical Palm Beach](https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800 \"rating:5\")\n![Misty Autumn Forest](https://images.unsplash.com/photo-1448375240586-882707db888b?w=800 \"rating:4\")\nEnjoy these photos!",
-        cover: "https://images.unsplash.com/photo-1578637387939-43c525550085?w=400",
-        domain: "unsplash.com",
+        title: 'Nature Photography & Scenic Wallpapers',
+        excerpt: 'A curated collection of scenic landscapes, mountain ranges, and sunsets with attached photos.',
+        note: 'Here are some of the best high-res wallpapers:\n![Mount Fuji Sunset](https://images.unsplash.com/photo-1578637387939-43c525550085?w=800 "rating:5")\n![Alps Mountain Range](https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800 "rating:4")\n![Tropical Palm Beach](https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800 "rating:5")\n![Misty Autumn Forest](https://images.unsplash.com/photo-1448375240586-882707db888b?w=800 "rating:4")\nEnjoy these photos!',
+        cover: 'https://images.unsplash.com/photo-1578637387939-43c525550085?w=400',
+        domain: 'unsplash.com',
         collectionId: 0,
-        link: "https://unsplash.com",
-        type: "link",
+        link: 'https://unsplash.com',
+        type: 'link',
         created: new Date().toISOString(),
-        tags: ["nature", "wallpaper", "photography"],
+        tags: ['nature', 'wallpaper', 'photography'],
         media: []
     },
     {
         _id: 102,
-        title: "Design System & UI Components",
-        excerpt: "Inspiration and component patterns for modern mobile and web user interfaces.",
-        note: "Key mockup references:\n![Mobile App Interface](https://images.unsplash.com/photo-1581291518655-9523c932deb4?w=800 \"rating:4\")\n![Color Palette Exploration](https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=800 \"rating:3\")\nCheck out the layout structures.",
-        cover: "https://images.unsplash.com/photo-1581291518655-9523c932deb4?w=400",
-        domain: "dribbble.com",
+        title: 'Design System & UI Components',
+        excerpt: 'Inspiration and component patterns for modern mobile and web user interfaces.',
+        note: 'Key mockup references:\n![Mobile App Interface](https://images.unsplash.com/photo-1581291518655-9523c932deb4?w=800 "rating:4")\n![Color Palette Exploration](https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=800 "rating:3")\nCheck out the layout structures.',
+        cover: 'https://images.unsplash.com/photo-1581291518655-9523c932deb4?w=400',
+        domain: 'dribbble.com',
         collectionId: 0,
-        link: "https://dribbble.com",
-        type: "link",
+        link: 'https://dribbble.com',
+        type: 'link',
         created: new Date().toISOString(),
-        tags: ["design", "ui", "ux"],
+        tags: ['design', 'ui', 'ux'],
         media: []
     },
     {
         _id: 103,
-        title: "Photo Gallery & Travel Showcase",
-        excerpt: "Demo showcasing photo ratings, touch swiping, and caption editing.",
-        note: "Travel memory:\n![Scenic View](https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800 \"rating:5\")\n![Coastal Highway](https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800 \"rating:5\")\nTap any photo to view in fullscreen!",
-        cover: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400",
-        domain: "travel.com",
+        title: 'Photo Gallery & Travel Showcase',
+        excerpt: 'Demo showcasing photo ratings, touch swiping, and caption editing.',
+        note: 'Travel memory:\n![Scenic View](https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800 "rating:5")\n![Coastal Highway](https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800 "rating:5")\nTap any photo to view in fullscreen!',
+        cover: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=400',
+        domain: 'travel.com',
         collectionId: 0,
-        link: "https://unsplash.com",
-        type: "link",
+        link: 'https://unsplash.com',
+        type: 'link',
         created: new Date().toISOString(),
-        tags: ["travel", "photos"],
+        tags: ['travel', 'photos'],
         media: []
     }
 ]
@@ -90,10 +92,33 @@ export function saveGuestBookmarks(items) {
 }
 
 export function handleGuestRequest(path = '', options = {}) {
-    const cleanPath = path.replace(/^\/v1\//, '').replace(/^v1\//, '')
+    let cleanPath = path
+    if (cleanPath.includes('//')) {
+        try {
+            cleanPath = new URL(cleanPath).pathname
+        } catch (e) {
+            cleanPath = cleanPath.split('//')[1].split('/').slice(1).join('/')
+        }
+    }
+    cleanPath = cleanPath.replace(/^\/?(rest\/)?v1\//, '').replace(/^\//, '')
     const method = (options.method || 'GET').toUpperCase()
 
-    // 1. User profile
+    // 1a. Collection Stats (GET /user/stats)
+    if (cleanPath === 'user/stats' || cleanPath.startsWith('user/stats')) {
+        const items = getGuestBookmarks()
+        const duplicateCount = findDuplicateBookmarks(items).length
+        return {
+            result: true,
+            items: [
+                { _id: 0, count: items.length },
+                { _id: -1, count: items.filter(b => b.collectionId === -1).length },
+                { _id: -9, count: duplicateCount },
+                { _id: -99, count: items.filter(b => b.collectionId === -99).length }
+            ]
+        }
+    }
+
+    // 1b. User profile
     if (cleanPath.startsWith('user')) {
         return {
             result: true,
@@ -120,15 +145,60 @@ export function handleGuestRequest(path = '', options = {}) {
 
     // 2b. Single Collection metadata/lastAction
     if (cleanPath.startsWith('collection/')) {
+        const id = parseInt(cleanPath.split('/')[1], 10)
+        let title = 'All bookmarks'
+        if (id === -1) title = 'Unsorted'
+        else if (id === -9) title = 'Duplicates'
+        else if (id === -99) title = 'Trash'
         return {
             result: true,
             lastAction: new Date().toISOString(),
             version: '1.0',
-            item: { _id: 0, title: 'All bookmarks', access: { level: 4 } }
+            item: { _id: id, title, access: { level: 4 } }
         }
     }
 
-    // 3. Single Bookmark update (PUT /raindrop/:id)
+    // 3a. Create new Bookmark (POST /raindrop)
+    if ((cleanPath === 'raindrop' || cleanPath.startsWith('raindrop?')) && method === 'POST') {
+        let body = {}
+        try { body = JSON.parse(options.body || '{}') } catch (e) {}
+        const items = getGuestBookmarks()
+        let domain = ''
+        if (body.link) {
+            try {
+                domain = new URL(body.link.startsWith('http') ? body.link : 'https://' + body.link).hostname.replace(/^www\./, '')
+            } catch (e) {}
+        }
+        const newId = Date.now()
+        const newItem = {
+            _id: newId,
+            title: body.title || body.link || 'New Bookmark',
+            excerpt: body.excerpt || '',
+            note: body.note || '',
+            cover: body.cover || '',
+            domain,
+            collectionId: typeof body.collectionId !== 'undefined' ? body.collectionId : 0,
+            link: body.link || '',
+            type: body.type || 'link',
+            created: new Date().toISOString(),
+            tags: body.tags || [],
+            media: body.media || []
+        }
+        items.unshift(newItem)
+        saveGuestBookmarks(items)
+        return { result: true, item: newItem }
+    }
+
+    // 3b. Delete Bookmark (DELETE /raindrop/:id)
+    if (cleanPath.startsWith('raindrop/') && method === 'DELETE') {
+        const id = parseInt(cleanPath.split('/')[1], 10)
+        let items = getGuestBookmarks()
+        items = items.filter(b => b._id !== id)
+        saveGuestBookmarks(items)
+        return { result: true }
+    }
+
+    // 3c. Single Bookmark update (PUT /raindrop/:id or POST /raindrop/:id)
     if (cleanPath.startsWith('raindrop/') && (method === 'PUT' || method === 'POST')) {
         const id = parseInt(cleanPath.split('/')[1], 10)
         let body = {}
@@ -153,6 +223,15 @@ export function handleGuestRequest(path = '', options = {}) {
     // 5. Bookmarks list (GET /raindrops/:collectionId)
     if (cleanPath.startsWith('raindrops')) {
         const items = getGuestBookmarks()
+        const isDuplicateRequest = cleanPath.includes('-9') || cleanPath.includes('duplicate') || path.includes('duplicate') || path.includes('-9')
+        if (isDuplicateRequest) {
+            const duplicateItems = findDuplicateBookmarks(items)
+            return {
+                result: true,
+                items: duplicateItems,
+                count: duplicateItems.length
+            }
+        }
         return {
             result: true,
             items: items,

@@ -8,6 +8,7 @@ export * from './blankSpace'
 export * from './getUrl'
 export * from './queryIsEqual'
 export * from './normalizeRecentSearch'
+export * from './duplicates'
 
 //Iterator by spaceId prefixes and original
 export const iterateSpaceId = (spaceId, func)=>{

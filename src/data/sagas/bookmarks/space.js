@@ -1,7 +1,8 @@
 import _ from 'lodash'
 import { call, put, takeEvery, select } from 'redux-saga/effects'
 import Api from '../../modules/api'
-import { getUrl } from '../../helpers/bookmarks'
+import { getUrl, findDuplicateBookmarks } from '../../helpers/bookmarks'
+import { COLLECTION_UPDATE_COUNT } from '../../constants/collections'
 
 import {
 	SPACE_LOAD_PRE, SPACE_LOAD_REQ, SPACE_LOAD_SUCCESS, SPACE_LOAD_ERROR,
@@ -56,7 +57,66 @@ function* loadSpace({spaceId, query, ignore=false}) {
 	if (ignore) return
 
 	try {
-		const { items=[], count } = yield call(Api.get, `raindrops/${getUrl(spaceId, query)}`);
+		let items = []
+		let count = 0
+
+		if (parseInt(spaceId) === -9) {
+			// Duplicate detection across ALL bookmarks
+			let duplicateItems = []
+
+			try {
+				// 1. Fetch from collection 0 (All bookmarks)
+				const allRes = yield call(Api.get, `raindrops/0?perpage=50`)
+				const fetched = allRes.items || []
+
+				// 2. Combine with any bookmarks already loaded in Redux state
+				const state = yield select()
+				const existing = Object.values(state.bookmarks?.elements || {})
+
+				const map = new Map()
+				for (const b of fetched) {
+					if (b && b._id) map.set(b._id, b)
+				}
+				for (const b of existing) {
+					if (b && b._id && !map.has(b._id)) map.set(b._id, b)
+				}
+
+				// 3. Detect duplicate links across all bookmarks
+				duplicateItems = findDuplicateBookmarks(Array.from(map.values()))
+			} catch (e) {}
+
+			// Fallback to server search query if local detection found none
+			if (!duplicateItems.length) {
+				try {
+					const sRes = yield call(Api.get, `raindrops/${getUrl(spaceId, query)}`)
+					if (sRes.items && sRes.items.length) {
+						duplicateItems = sRes.items
+					}
+				} catch (e) {}
+			}
+
+			// Apply search filter if query has search string
+			if (query && query.search) {
+				const sLower = query.search.trim().toLowerCase()
+				duplicateItems = duplicateItems.filter(b => 
+					((b.title || '') + ' ' + (b.excerpt || '') + ' ' + (b.link || '')).toLowerCase().includes(sLower)
+				)
+			}
+
+			items = duplicateItems
+			count = duplicateItems.length
+
+			// Update Duplicates collection count in sidebar
+			yield put({
+				type: COLLECTION_UPDATE_COUNT,
+				_id: -9,
+				count: duplicateItems.length
+			})
+		} else {
+			const res = yield call(Api.get, `raindrops/${getUrl(spaceId, query)}`)
+			items = res.items || []
+			count = res.count || 0
+		}
 
 		yield put({
 			type: (query.page ? SPACE_NEXTPAGE_SUCCESS : SPACE_LOAD_SUCCESS),

@@ -249,7 +249,7 @@ export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCap
                             autoFocus
                             rows={3}
                             className={s.urlTextarea}
-                            placeholder={'Paste 1 or more image URLs — one per line, or separated by commas:\n\nhttps://example.com/photo1.jpg\nhttps://example.com/photo2.jpg\n\nOr paste Google Drive share links.'}
+                            placeholder={'Paste 1 or more image URLs (one per line, or separated by commas):\n\nhttps://example.com/photo.jpg\nhttps://pbs.twimg.com/media/... (copy image address)\nhttps://drive.google.com/file/d/... (Google Drive)'}
                             value={newImageUrl}
                             onChange={e => {
                                 setNewImageUrl(e.target.value)

@@ -1,6 +1,7 @@
 import { all, call, put, takeEvery, select } from 'redux-saga/effects'
 import Api from '../../modules/api'
 import { removeCollection } from './single'
+import { getDuplicatesCount } from '../../helpers/bookmarks'
 import _ from 'lodash-es'
 
 import {
@@ -61,6 +62,14 @@ export function* loadCollections({ ignore=false, onSuccess, onFail }) {
 				const statIndex = (stat.items||[]).findIndex((a)=>a._id==item._id)
 				if (statIndex!=-1)
 					count = stat.items[statIndex].count
+			}
+
+			// Fallback duplicate count calculation
+			if (item._id === -9 && count === 0) {
+				const existing = Object.values(state.bookmarks?.elements || {})
+				if (existing.length) {
+					count = getDuplicatesCount(existing)
+				}
 			}
 			
 			return item
