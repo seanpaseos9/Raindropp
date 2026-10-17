@@ -163,7 +163,7 @@ const fetchWrap = (url, options)=>{
 		...(token ? { 'Authorization': `Bearer ${token}` } : {})
 	}
 
-	return fetch(url, { ...options, headers })
+	return fetch(url, { ...options, headers, credentials: 'include' })
 		.then((res)=>{
 			if (res.status >= 200 && res.status < 300)
 				return res
