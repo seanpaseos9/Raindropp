@@ -5,6 +5,7 @@ import getScreenshotUri from '~data/modules/format/screenshot'
 import getFaviconUri from '~data/modules/format/favicon'
 import size from './size'
 import Preloader from '~co/common/preloader'
+import { transformImageUrl } from '~co/bookmarks/edit/form/carousel/helper'
 
 //cache thumb/screenshot uri
 const thumbs = {}
@@ -52,6 +53,35 @@ export default class BookmarkItemCover extends React.PureComponent {
     onImageLoadSuccess = ()=>
         this.setState({ loaded: true })
 
+    onImageError = (e) => {
+        const { cover } = this.props
+        const img = e.target
+        if (!img) return
+
+        // 1. Try raw direct cover if it was routed through rdl.ink
+        if (cover && cover !== '<screenshot>' && !img.dataset.triedDirect) {
+            img.dataset.triedDirect = 'true'
+            let directUrl = cover
+            const match = cover.match(/https?:\/\/[^\s<>"]+/i)
+            if (match) directUrl = match[0]
+            const transformed = transformImageUrl(directUrl, true)
+            img.src = transformed ? transformed.url : directUrl
+            return
+        }
+
+        // 2. Try weserv image proxy
+        if (cover && cover.startsWith('http') && !img.dataset.triedProxy) {
+            img.dataset.triedProxy = 'true'
+            const clean = cover.match(/https?:\/\/[^\s<>"]+/i)?.[0] || cover
+            img.src = `https://images.weserv.nl/?url=${encodeURIComponent(clean)}`
+            return
+        }
+
+        if (this.props.indicator) {
+            this.onImageLoadSuccess()
+        }
+    }
+
     renderImage = ()=>{
         const { cover, view, link, domain, coverSize, indicator, ...etc } = this.props
         let { width, height, ar } = size(view, coverSize) //use height only for img element
@@ -66,8 +96,14 @@ export default class BookmarkItemCover extends React.PureComponent {
 
             //in other view modes we show a thumbnail or screenshot
             default:
-                if (cover && cover!='<screenshot>')
-                    uri = getUri(cover)
+                if (cover && cover!='<screenshot>') {
+                    let cleanCover = cover
+                    const match = cover.match(/https?:\/\/[^\s<>"]+/i)
+                    if (match) cleanCover = match[0]
+                    const transformed = transformImageUrl(cleanCover, true)
+                    const finalCover = transformed ? transformed.url : cleanCover
+                    uri = getUri(finalCover)
+                }
                 else if (link)
                     uri = getUri(link, 'screenshot')
                 break
@@ -103,7 +139,7 @@ export default class BookmarkItemCover extends React.PureComponent {
                     //type='image/jpeg'
                     onLoadStart={indicator ? this.onImageLoadStart : undefined}
                     onLoad={indicator ? this.onImageLoadSuccess : undefined}
-                    onError={indicator && uri ? this.onImageLoadSuccess : undefined} />
+                    onError={this.onImageError} />
             </>
         )
     }

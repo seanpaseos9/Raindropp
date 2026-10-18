@@ -89,7 +89,9 @@ export const normalizeBookmark = (item={}, options)=>{
 		cache:			item.cache ? item.cache.status : '',
 		fileType:		item.fileType || (item.file ? item.file.type : null),
 		reminder:		{ date: item.reminder?.date || undefined },
-		rating: 		Math.max(0, Math.min(5, parseInt(item.rating || (typeof window !== 'undefined' && window.localStorage ? window.localStorage.getItem(`raindrop_rating_${item._id}`) : 0) || 0)))
+		rating: 		Math.max(0, Math.min(5, parseInt(item.rating || (typeof window !== 'undefined' && window.localStorage ? window.localStorage.getItem(`raindrop_rating_${item._id}`) : 0) || 0))),
+		read: 			Boolean(item.read || (typeof window !== 'undefined' && window.localStorage && window.localStorage.getItem(`raindrop_read_${item._id}`) === 'true')),
+		lastChapter: 	String(item.lastChapter || (typeof window !== 'undefined' && window.localStorage ? window.localStorage.getItem(`raindrop_chapter_${item._id}`) : '') || '')
 	}
 
 	if (!options.flat)

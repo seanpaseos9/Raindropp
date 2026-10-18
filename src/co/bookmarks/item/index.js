@@ -70,6 +70,39 @@ class BookmarkItem extends React.Component {
         onReparseClick: ()=>
             this.props.actions.oneReparse(this.props.item._id),
 
+        onToggleRead: (e)=>{
+            if (e) e.stopPropagation()
+            const next = !this.props.item.read
+            try {
+                if (typeof window !== 'undefined' && window.localStorage) {
+                    window.localStorage.setItem(`raindrop_read_${this.props.item._id}`, String(next))
+                }
+            } catch(err){}
+            this.props.actions.oneUpdate(this.props.item._id, { read: next })
+        },
+
+        onUpdateChapter: (val)=>{
+            try {
+                if (typeof window !== 'undefined' && window.localStorage) {
+                    window.localStorage.setItem(`raindrop_chapter_${this.props.item._id}`, String(val))
+                }
+            } catch(err){}
+            this.props.actions.oneUpdate(this.props.item._id, { lastChapter: val })
+        },
+
+        onRestartChapter: (e)=>{
+            if (e) {
+                e.preventDefault()
+                e.stopPropagation()
+            }
+            try {
+                if (typeof window !== 'undefined' && window.localStorage) {
+                    window.localStorage.removeItem(`raindrop_chapter_${this.props.item._id}`)
+                }
+            } catch(err){}
+            this.props.actions.oneUpdate(this.props.item._id, { lastChapter: '' })
+        },
+
         onContextMenu: (e)=>{
             e.preventDefault()
             e.target.focus()

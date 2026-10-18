@@ -4,7 +4,7 @@ import Lightbox from './lightbox'
 import StarRating from './rating'
 import { formatMultipleImageEntries, handleImageLoadError } from './helper'
 
-export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCaption, onUpdateRating }) {
+export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCaption, onUpdateRating, onDeleteImage }) {
     const [activeIndex, setActiveIndex] = useState(0)
     const [lightboxIndex, setLightboxIndex] = useState(null)
     const [showAddInput, setShowAddInput] = useState(false)
@@ -15,6 +15,7 @@ export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCap
     const [editCaptionValue, setEditCaptionValue] = useState('')
     const [addFeedback, setAddFeedback] = useState('')
 
+    const fileInputRef = useRef(null)
     const trackRef = useRef(null)
     const isProgrammaticScroll = useRef(false)
     const scrollTimeoutRef = useRef(null)
@@ -165,6 +166,41 @@ export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCap
         window.addEventListener('mouseup', onMouseUp)
     }
 
+    // File upload handler — adds each image file individually as its own carousel entry
+    const handleFileUpload = (e) => {
+        const files = Array.from(e.target.files || [])
+        if (!files.length || !onAddImage) return
+        let uploadedCount = 0
+
+        files.forEach(file => {
+            const reader = new FileReader()
+            reader.onload = (loadEvent) => {
+                const dataUrl = loadEvent.target?.result
+                if (dataUrl) {
+                    const cleanName = file.name
+                        ? file.name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ')
+                        : 'Attached Photo'
+                    // Call onAddImage once per file so each data URL is a separate Markdown entry
+                    onAddImage(dataUrl, cleanName, newImageRating)
+                    uploadedCount++
+                    if (uploadedCount === files.length) {
+                        setAddFeedback(`✅ ${uploadedCount} uploaded photo${uploadedCount > 1 ? 's' : ''} added!`)
+                        setTimeout(() => {
+                            setAddFeedback('')
+                            setShowAddInput(false)
+                        }, 1200)
+                        setTimeout(() => {
+                            const track = trackRef.current
+                            if (track) track.scrollTo({ left: track.scrollWidth, behavior: 'smooth' })
+                        }, 300)
+                    }
+                }
+            }
+            reader.readAsDataURL(file)
+        })
+        e.target.value = ''
+    }
+
     // Add Image submit (supports 1, 2, or more photos at once via newlines/commas)
     const handleAddSubmit = (e) => {
         if (e) e.preventDefault()
@@ -280,6 +316,21 @@ export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCap
                         <div className={s.addFeedback}>{addFeedback}</div>
                     )}
                     <div className={s.addFormActions}>
+                        <input
+                            ref={fileInputRef}
+                            type='file'
+                            accept='image/jpeg,image/jpg,image/png,image/webp,image/gif,image/svg+xml,image/*'
+                            multiple
+                            style={{ display: 'none' }}
+                            onChange={handleFileUpload}
+                        />
+                        <button
+                            type='button'
+                            className={s.cancelAddBtn}
+                            onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                            title='Upload image files from device'>
+                            📁 Upload File(s)
+                        </button>
                         <button
                             type='button'
                             className={s.cancelAddBtn}
@@ -335,6 +386,40 @@ export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCap
                                     onError={(e) => handleImageLoadError(e, item)}
                                 />
 
+                                {/* Slide Trash Delete Button (🗑️) */}
+                                {onDeleteImage && (
+                                    <button
+                                        type='button'
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            if (window.confirm('Delete this attached photo? (🗑️)')) {
+                                                onDeleteImage(item)
+                                            }
+                                        }}
+                                        title='Delete photo (🗑️)'
+                                        style={{
+                                            position: 'absolute',
+                                            top: '8px',
+                                            right: '8px',
+                                            zIndex: 10,
+                                            background: 'rgba(0,0,0,0.65)',
+                                            color: '#fff',
+                                            border: 'none',
+                                            borderRadius: '50%',
+                                            width: '28px',
+                                            height: '28px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            cursor: 'pointer',
+                                            fontSize: '13px',
+                                            boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                                            transition: 'transform 0.15s ease'
+                                        }}>
+                                        🗑️
+                                    </button>
+                                )}
+
                                 {/* Caption & Rating Overlay Bar */}
                                 {!isEditingThisCaption ? (
                                     <div className={s.captionBar} onClick={e => e.stopPropagation()}>
@@ -372,6 +457,28 @@ export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCap
                                                     title='View fullscreen lightbox'>
                                                     🔍 Zoom
                                                 </button>
+                                                {onDeleteImage && (
+                                                    <button
+                                                        type='button'
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            if (window.confirm('Delete this attached photo? (🗑️)')) {
+                                                                onDeleteImage(item)
+                                                            }
+                                                        }}
+                                                        title='Delete photo (🗑️)'
+                                                        style={{
+                                                            background: 'rgba(255, 59, 48, 0.2)',
+                                                            color: '#ff3b30',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            padding: '2px 6px',
+                                                            cursor: 'pointer',
+                                                            fontSize: '12px'
+                                                        }}>
+                                                        🗑️
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -442,6 +549,7 @@ export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCap
                     onClose={() => setLightboxIndex(null)}
                     onUpdateRating={onUpdateRating}
                     onUpdateCaption={onUpdateCaption}
+                    onDeleteImage={onDeleteImage}
                 />
             )}
         </div>

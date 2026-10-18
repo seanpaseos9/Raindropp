@@ -19,7 +19,9 @@ const DEFAULT_BOOKMARKS = [
         created: new Date().toISOString(),
         tags: ['nature', 'wallpaper', 'photography'],
         media: [],
-        rating: 5
+        rating: 5,
+        read: true,
+        lastChapter: 'Ch. 10 (Completed)'
     },
     {
         _id: 102,
@@ -34,7 +36,9 @@ const DEFAULT_BOOKMARKS = [
         created: new Date().toISOString(),
         tags: ['design', 'ui', 'ux'],
         media: [],
-        rating: 4
+        rating: 4,
+        read: false,
+        lastChapter: 'Section 4'
     },
     {
         _id: 103,
@@ -49,7 +53,9 @@ const DEFAULT_BOOKMARKS = [
         created: new Date().toISOString(),
         tags: ['travel', 'photos'],
         media: [],
-        rating: 5
+        rating: 5,
+        read: false,
+        lastChapter: ''
     }
 ]
 
@@ -186,7 +192,9 @@ export function handleGuestRequest(path = '', options = {}) {
             created: new Date().toISOString(),
             tags: body.tags || [],
             media: body.media || [],
-            rating: body.rating || 0
+            rating: body.rating || 0,
+            read: Boolean(body.read),
+            lastChapter: body.lastChapter || ''
         }
         items.unshift(newItem)
         saveGuestBookmarks(items)
@@ -226,16 +234,20 @@ export function handleGuestRequest(path = '', options = {}) {
 
     // 5. Bookmarks list (GET /raindrops/:collectionId)
     if (cleanPath.startsWith('raindrops')) {
-        const items = getGuestBookmarks()
+        let items = getGuestBookmarks()
         const isDuplicateRequest = cleanPath.includes('-9') || cleanPath.includes('duplicate') || path.includes('duplicate') || path.includes('-9')
         if (isDuplicateRequest) {
-            const duplicateItems = findDuplicateBookmarks(items)
-            return {
-                result: true,
-                items: duplicateItems,
-                count: duplicateItems.length
-            }
+            items = findDuplicateBookmarks(items)
         }
+
+        // Support is:read and is:unread filtering
+        const reqQuery = cleanPath + ' ' + (path || '')
+        if (reqQuery.includes('is:read') || reqQuery.includes('is%3Aread')) {
+            items = items.filter(b => Boolean(b.read))
+        } else if (reqQuery.includes('is:unread') || reqQuery.includes('is%3Aunread')) {
+            items = items.filter(b => !b.read)
+        }
+
         return {
             result: true,
             items: items,

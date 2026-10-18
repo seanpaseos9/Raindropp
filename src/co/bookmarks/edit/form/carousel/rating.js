@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import s from './rating.module.styl'
+import { getRatingColor } from '../ratingColors'
 
 export default function StarRating({
     rating = 0,
@@ -12,6 +13,7 @@ export default function StarRating({
     const [hoverRating, setHoverRating] = useState(0)
 
     const currentScore = hoverRating || rating
+    const activeColor = getRatingColor(currentScore)
 
     const handleClick = (star, e) => {
         if (e) {
@@ -38,6 +40,7 @@ export default function StarRating({
                         key={star}
                         type='button'
                         className={`${s.starBtn} ${s[size]} ${filled ? s.starFilled : s.starEmpty}`}
+                        style={filled ? { color: activeColor, textShadow: `0 0 1px ${activeColor}` } : {}}
                         disabled={readonly}
                         onMouseEnter={() => !readonly && setHoverRating(star)}
                         onMouseLeave={() => !readonly && setHoverRating(0)}
@@ -48,7 +51,9 @@ export default function StarRating({
                 )
             })}
             {showText && currentScore > 0 && (
-                <span className={s.ratingText}>
+                <span 
+                    className={s.ratingText}
+                    style={{ color: activeColor, fontWeight: 700 }}>
                     {currentScore}/5
                 </span>
             )}

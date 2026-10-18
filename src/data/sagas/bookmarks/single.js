@@ -178,8 +178,22 @@ function* updateBookmark({_id, set={}, ignore=false, onSuccess, onFail}) {
 	if ((ignore)||(!_id))
 		return;
 
+	// Local persistence
+	try {
+		if (typeof window !== 'undefined' && window.localStorage) {
+			if (typeof set.read !== 'undefined') window.localStorage.setItem(`raindrop_read_${_id}`, String(set.read))
+			if (typeof set.lastChapter !== 'undefined') window.localStorage.setItem(`raindrop_chapter_${_id}`, String(set.lastChapter))
+			if (typeof set.rating !== 'undefined') {
+				if (set.rating > 0) window.localStorage.setItem(`raindrop_rating_${_id}`, String(set.rating))
+				else window.localStorage.removeItem(`raindrop_rating_${_id}`)
+			}
+		}
+	} catch (e) {}
+
 	try{
-		const { item={} } = yield call(Api.put, 'raindrop/'+_id, set)
+		let { item={} } = yield call(Api.put, 'raindrop/'+_id, set)
+		// Ensure custom fields persist even if backend trims them
+		item = { ...set, ...item, _id }
 
 		yield put({
 			type: BOOKMARK_UPDATE_SUCCESS,

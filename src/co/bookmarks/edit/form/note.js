@@ -13,7 +13,8 @@ import {
     extractImageUrls, 
     formatMultipleImageEntries, 
     updateImageCaptionInNote, 
-    updateImageRatingInNote 
+    updateImageRatingInNote,
+    removeImageFromNote
 } from './carousel/helper'
 
 export default function BookmarkEditFormNote({ autoFocus, item = {}, onCommit, onChange, onSave }) {    
@@ -30,6 +31,11 @@ export default function BookmarkEditFormNote({ autoFocus, item = {}, onCommit, o
     const { hasImages, images, cleanText } = useMemo(() => {
         return extractImageUrls(note || '', item)
     }, [note, item])
+
+    // Auto-collapse to carousel view whenever images appear (e.g. right after upload)
+    useEffect(() => {
+        if (hasImages) setEditingRaw(false)
+    }, [hasImages])
 
     const onChangeField = useCallback(e => {
         const val = e.target.value
@@ -88,6 +94,49 @@ export default function BookmarkEditFormNote({ autoFocus, item = {}, onCommit, o
         saveNote(newNote)
     }, [saveNote])
 
+    // Permanently remove an image attachment from note and media
+    const onDeleteImage = useCallback((image) => {
+        const currentNote = noteRef.current || ''
+        const newNote = removeImageFromNote(currentNote, image)
+        const targetUrl = image.originalUrl || image.url || ''
+        let updatedMedia = item.media || []
+        if (Array.isArray(updatedMedia)) {
+            updatedMedia = updatedMedia.filter(m => {
+                const link = typeof m === 'string' ? m : m?.link
+                return link !== targetUrl
+            })
+        }
+        noteRef.current = newNote
+        onChange({ note: newNote, media: updatedMedia })
+        if (onSave) onSave()
+        if (onCommit) onCommit()
+    }, [item, onChange, onSave, onCommit])
+
+    // Hidden file input ref for the pre-carousel (no-images) state
+    const initialFileInputRef = useRef(null)
+
+    // Handle file uploads when no carousel exists yet.
+    // Each file is added individually so base64 data URLs become separate Markdown image entries
+    // and are reliably detected by extractImageUrls on the next render.
+    const handleInitialFileUpload = useCallback((e) => {
+        const files = Array.from(e.target.files || [])
+        if (!files.length) return
+        files.forEach(file => {
+            const reader = new FileReader()
+            reader.onload = (ev) => {
+                const dataUrl = ev.target?.result
+                if (dataUrl) {
+                    const cleanName = file.name
+                        ? file.name.replace(/\.[^/.]+$/, '').replace(/[-_]+/g, ' ')
+                        : 'Uploaded Photo'
+                    onAddImage(dataUrl, cleanName, 0)
+                }
+            }
+            reader.readAsDataURL(file)
+        })
+        e.target.value = ''
+    }, [onAddImage])
+
     const handlePromptAddImage = useCallback(() => {
         const url = window.prompt('Paste image URL(s) or Google Drive link (separate multiple with newlines or commas):')
         if (url) {
@@ -113,13 +162,31 @@ export default function BookmarkEditFormNote({ autoFocus, item = {}, onCommit, o
                             {editingRaw ? '🖼️ View Carousel' : '✏️ Edit Raw Note'}
                         </button>
                     ) : (
-                        <button
-                            type='button'
-                            className={s.actionBtn}
-                            onClick={handlePromptAddImage}
-                            title='Attach image links or Google Drive photos'>
-                            📷 Attach Image(s)
-                        </button>
+                        <>
+                            {/* Hidden file input — triggers device photo picker */}
+                            <input
+                                ref={initialFileInputRef}
+                                type='file'
+                                accept='image/jpeg,image/jpg,image/png,image/webp,image/gif,image/svg+xml,image/*'
+                                multiple
+                                style={{ display: 'none' }}
+                                onChange={handleInitialFileUpload}
+                            />
+                            <button
+                                type='button'
+                                className={s.actionBtn}
+                                onClick={() => initialFileInputRef.current && initialFileInputRef.current.click()}
+                                title='Upload image files from your device'>
+                                📁 Upload Photo(s)
+                            </button>
+                            <button
+                                type='button'
+                                className={s.actionBtn}
+                                onClick={handlePromptAddImage}
+                                title='Attach image links or Google Drive photos'>
+                                📷 Attach URL
+                            </button>
+                        </>
                     )}
                 </div>
 
@@ -129,7 +196,8 @@ export default function BookmarkEditFormNote({ autoFocus, item = {}, onCommit, o
                         images={images} 
                         onAddImage={onAddImage}
                         onUpdateCaption={onUpdateCaption}
-                        onUpdateRating={onUpdateRating} />
+                        onUpdateRating={onUpdateRating}
+                        onDeleteImage={onDeleteImage} />
                 )}
 
                 {/* Note text field or preview */}

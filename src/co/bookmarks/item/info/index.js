@@ -7,6 +7,7 @@ import SafeHtml from '~co/common/safeHtml'
 import { Link } from 'react-router-dom'
 import Icon, { Avatar } from '~co/common/icon'
 import Path from './path'
+import { getRatingColor } from '~co/bookmarks/edit/form/ratingColors'
 
 export default function BookmarkItemInfo(props) {
     const { className='', creatorRef, domain, type, link, created, reparse, collectionId, spaceId, important, broken, duplicate, cache, highlight, fileType } = props
@@ -25,8 +26,12 @@ export default function BookmarkItemInfo(props) {
             ) : null}
 
             {props.rating > 0 ? (
-                <section data-inline className={s.ratingLabel} title={`Rating: ${props.rating}/5`}>
-                    <span className={s.ratingStar}>★</span> {props.rating}
+                <section 
+                    data-inline 
+                    className={s.ratingLabel} 
+                    title={`Rating: ${props.rating}/5`}
+                    style={{ color: getRatingColor(props.rating) }}>
+                    <span className={s.ratingStar} style={{ color: getRatingColor(props.rating) }}>★</span> {props.rating}
                 </section>
             ) : null}
 

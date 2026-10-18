@@ -1,0 +1,76 @@
+.container {
+    display: flex
+    flex-wrap: wrap
+    align-items: center
+    gap: 12px
+    padding: 6px 0
+}
+
+.readCheckbox {
+    display: inline-flex
+    align-items: center
+    gap: 6px
+    cursor: pointer
+    font-size: 13px
+    font-weight: 500
+    user-select: none
+    color: var(--primary-text-color)
+
+    input {
+        cursor: pointer
+        width: 16px
+        height: 16px
+        accent-color: #34c759
+    }
+}
+
+.chapterGroup {
+    display: inline-flex
+    align-items: center
+    gap: 6px
+    background: var(--background-secondary, rgba(0,0,0,0.04))
+    border-radius: var(--border-radius, 6px)
+    padding: 2px 8px
+}
+
+.chapterLabel {
+    font-size: 12px
+    font-weight: 600
+    color: var(--secondary-text-color)
+}
+
+.chapterInput {
+    appearance: none
+    border: none
+    background: transparent
+    font-size: 13px
+    color: var(--primary-text-color)
+    width: 110px
+    padding: 2px 4px
+    outline: none
+
+    &::placeholder {
+        opacity: 0.6
+    }
+}
+
+.restartBtn {
+    appearance: none
+    background: transparent
+    border: none
+    cursor: pointer
+    padding: 2px 4px
+    border-radius: 4px
+    font-size: 13px
+    opacity: 0.8
+    transition: transform 0.2s ease, opacity 0.2s ease
+
+    &:hover {
+        opacity: 1
+        transform: rotate(-45deg)
+    }
+
+    &:active {
+        transform: rotate(-180deg)
+    }
+}

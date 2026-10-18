@@ -6,6 +6,7 @@ import { captureTab } from '~target'
 import Cover from '~co/bookmarks/item/cover'
 import Icon from '~co/common/icon'
 import ImagePicker from '~co/picker/image'
+import { transformImageUrl } from './carousel/helper'
 
 export default class BookmarkEditFormCover extends React.Component {
     state = {
@@ -22,13 +23,20 @@ export default class BookmarkEditFormCover extends React.Component {
             this.setState({ modal: false }),
 
         onLink: async(link)=>{
-            let media = [...this.props.item.media]
+            let cleanLink = (link || '').trim()
+            const match = cleanLink.match(/https?:\/\/[^\s<>"]+/i) || cleanLink.match(/data:image\/[^\s<>"]+/i)
+            if (match) cleanLink = match[0]
 
-            if (!media.some(item=>item.link == link))
-                media = [ ...media, { link } ]
+            const transformed = transformImageUrl(cleanLink, true)
+            const finalLink = transformed ? transformed.url : cleanLink
+
+            let media = [...(this.props.item.media || [])]
+
+            if (!media.some(item=>item.link == finalLink))
+                media = [ ...media, { link: finalLink } ]
 
             this.props.onChange({
-                cover: link,
+                cover: finalLink,
                 media
             })
 

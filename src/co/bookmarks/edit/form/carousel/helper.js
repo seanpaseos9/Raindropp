@@ -391,8 +391,14 @@ export function formatImageNoteEntry(url, caption = '', rating = 0) {
 export function formatMultipleImageEntries(rawInput = '', caption = '', rating = 0) {
     if (!rawInput || typeof rawInput !== 'string') return []
 
-    // Match all http/https, data:image, or Google Drive URLs in the input
-    const urlMatches = rawInput.match(/https?:\/\/[^\s,;"'<>]+|data:image\/[^\s,;"'<>]+|drive\.google\.com\/[^\s,;"'<>]+/gi) || []
+    // Extract full base64 data URLs first — these CONTAIN semicolons (data:image/jpeg;base64,...)
+    // so they need their own pattern that does NOT exclude semicolons.
+    const dataUrlMatches = rawInput.match(/data:image\/[a-zA-Z0-9.+_-]+;[^\s"'<>)]+/gi) || []
+
+    // Then extract http/https and Google Drive URLs (semicolons excluded as list separators)
+    const httpUrlMatches = rawInput.match(/https?:\/\/[^\s,;"'<>]+|drive\.google\.com\/[^\s,;"'<>]+/gi) || []
+
+    const urlMatches = [...dataUrlMatches, ...httpUrlMatches]
 
     const candidates = urlMatches.length > 0
         ? urlMatches
@@ -400,12 +406,16 @@ export function formatMultipleImageEntries(rawInput = '', caption = '', rating =
 
     const entries = []
     candidates.forEach((rawUrl, idx) => {
-        let cleanUrl = rawUrl.trim().replace(/[.,;]+$/, '')
+        let cleanUrl = rawUrl.trim()
+        // Only strip trailing punctuation from non-data URLs to avoid corrupting base64 strings
+        if (!cleanUrl.startsWith('data:')) {
+            cleanUrl = cleanUrl.replace(/[.,;]+$/, '')
+        }
         if (!cleanUrl) return
         if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://') && !cleanUrl.startsWith('data:image/')) {
             cleanUrl = 'https://' + cleanUrl
         }
-        const itemCaption = candidates.length > 1 && caption ? `${caption} ${idx + 1}` : caption
+        const itemCaption = candidates.length > 1 && caption ? caption + ' ' + (idx + 1) : caption
         const entry = formatImageNoteEntry(cleanUrl, itemCaption, rating)
         if (entry) entries.push(entry)
     })
@@ -460,6 +470,29 @@ export function updateImageRatingInNote(note = '', image = {}, newRating = 0) {
     }
 
     return note ? `${note.trim()}\n${newEntry}` : newEntry
+}
+
+/**
+ * Completely removes an attached image from the raw note string.
+ */
+export function removeImageFromNote(note = '', image = {}) {
+    let result = note || ''
+    const targetUrl = image.originalUrl || image.url || ''
+
+    if (image.rawMatch && result.includes(image.rawMatch)) {
+        result = result.replace(image.rawMatch, '')
+    } else if (targetUrl && result.includes(targetUrl)) {
+        const regex = new RegExp(`!\\[[^\\]]*\\]\\(${escapeRegex(targetUrl)}[^)]*\\)|${escapeRegex(targetUrl)}`, 'g')
+        result = result.replace(regex, '')
+    }
+
+    // Clean up empty lines created by removing the image
+    return result
+        .split('\n')
+        .map(line => line.trim())
+        .filter((line, i, arr) => line !== '' || (i > 0 && arr[i - 1] !== ''))
+        .join('\n')
+        .trim()
 }
 
 /**

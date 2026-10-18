@@ -66,7 +66,7 @@ function* loadSpace({spaceId, query, ignore=false}) {
 
 			try {
 				// 1. Fetch from collection 0 (All bookmarks)
-				const allRes = yield call(Api.get, `raindrops/0?perpage=50`)
+				const allRes = yield call(Api.get, 'raindrops/0?perpage=50')
 				const fetched = allRes.items || []
 
 				// 2. Combine with any bookmarks already loaded in Redux state
@@ -97,10 +97,27 @@ function* loadSpace({spaceId, query, ignore=false}) {
 
 			// Apply search filter if query has search string
 			if (query && query.search) {
-				const sLower = query.search.trim().toLowerCase()
-				duplicateItems = duplicateItems.filter(b => 
-					((b.title || '') + ' ' + (b.excerpt || '') + ' ' + (b.link || '')).toLowerCase().includes(sLower)
-				)
+				const sLower = query.search
+					.replace(/\bis:read\b/gi, '')
+					.replace(/\bis:unread\b/gi, '')
+					.trim()
+					.toLowerCase()
+
+				if (sLower) {
+					duplicateItems = duplicateItems.filter(b => 
+						((b.title || '') + ' ' + (b.excerpt || '') + ' ' + (b.link || '')).toLowerCase().includes(sLower)
+					)
+				}
+
+				if (/\bis:read\b/i.test(query.search)) {
+					duplicateItems = duplicateItems.filter(b => 
+						Boolean(b.read || (typeof window !== 'undefined' && window.localStorage && window.localStorage.getItem(`raindrop_read_${b._id}`) === 'true')) === true
+					)
+				} else if (/\bis:unread\b/i.test(query.search)) {
+					duplicateItems = duplicateItems.filter(b => 
+						Boolean(b.read || (typeof window !== 'undefined' && window.localStorage && window.localStorage.getItem(`raindrop_read_${b._id}`) === 'true')) === false
+					)
+				}
 			}
 
 			items = duplicateItems
@@ -113,9 +130,49 @@ function* loadSpace({spaceId, query, ignore=false}) {
 				count: duplicateItems.length
 			})
 		} else {
-			const res = yield call(Api.get, `raindrops/${getUrl(spaceId, query)}`)
-			items = res.items || []
-			count = res.count || 0
+			let isReadFilter = null
+			let apiQuery = query
+			if (query && query.search) {
+				if (/\bis:read\b/i.test(query.search)) {
+					isReadFilter = true
+				} else if (/\bis:unread\b/i.test(query.search)) {
+					isReadFilter = false
+				}
+
+				if (isReadFilter !== null) {
+					const cleanSearch = query.search
+						.replace(/\bis:read\b/gi, '')
+						.replace(/\bis:unread\b/gi, '')
+						.trim()
+					apiQuery = { ...query, search: cleanSearch }
+				}
+			}
+
+			const res = yield call(Api.get, `raindrops/${getUrl(spaceId, apiQuery)}`)
+			let fetchedItems = res.items || []
+
+			if (isReadFilter !== null) {
+				const state = yield select()
+				const existing = Object.values(state.bookmarks?.elements || {}).filter(b => 
+					parseInt(spaceId) === 0 || b.collectionId === parseInt(spaceId)
+				)
+				const map = new Map()
+				for (const b of fetchedItems) {
+					if (b && b._id) map.set(b._id, b)
+				}
+				for (const b of existing) {
+					if (b && b._id && !map.has(b._id)) map.set(b._id, b)
+				}
+
+				items = Array.from(map.values()).filter(b => {
+					const isRead = Boolean(b.read || (typeof window !== 'undefined' && window.localStorage && window.localStorage.getItem(`raindrop_read_${b._id}`) === 'true'))
+					return isRead === isReadFilter
+				})
+				count = items.length
+			} else {
+				items = fetchedItems
+				count = res.count || 0
+			}
 		}
 
 		yield put({
@@ -152,7 +209,8 @@ function* viewToggle({ spaceId, field }) {
 	yield viewConfig({ spaceId, raindrops_hide })
 }
 
-function* viewConfig({ spaceId, ...config }) {
+function* viewConfig(payload) {
+	const config = _.omit(payload, 'spaceId')
 	yield put({
 		type: USER_UPDATE_REQ,
 		user: {

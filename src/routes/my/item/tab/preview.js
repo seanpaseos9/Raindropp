@@ -1,5 +1,5 @@
 import s from './preview.module.styl'
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { useSelector } from 'react-redux'
 import { API_ENDPOINT_URL } from '~data/constants/app'
 import { handleImageLoadError } from '~co/bookmarks/edit/form/carousel/helper'
@@ -47,6 +47,35 @@ export default function PageMyItemTabPreview({ item = {}, webViewRef }) {
     const zoomIn = useCallback(() => setZoom(z => Math.min(3, +(z + 0.5).toFixed(1))), [])
     const zoomOut = useCallback(() => setZoom(z => Math.max(0.5, +(z - 0.5).toFixed(1))), [])
     const resetZoom = useCallback(() => setZoom(1), [])
+    const pinchRef = useRef(null)
+
+    const onTouchStart = (e) => {
+        if (e.touches.length === 2) {
+            if (e.cancelable) e.preventDefault()
+            const dist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            )
+            pinchRef.current = { dist, initialZoom: zoom }
+        }
+    }
+
+    const onTouchMove = (e) => {
+        if (e.touches.length === 2 && pinchRef.current) {
+            if (e.cancelable) e.preventDefault()
+            const dist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            )
+            const factor = dist / (pinchRef.current.dist || 1)
+            const nextZoom = Math.min(3, Math.max(0.5, +(pinchRef.current.initialZoom * factor).toFixed(2)))
+            setZoom(nextZoom)
+        }
+    }
+
+    const onTouchEnd = () => {
+        if (pinchRef.current) pinchRef.current = null
+    }
 
     if (isImage && imageUrl) {
         return (
@@ -55,7 +84,11 @@ export default function PageMyItemTabPreview({ item = {}, webViewRef }) {
                     <Preloader className={s.preloader} />
                 )}
 
-                <div className={s.imageStage}>
+                <div 
+                    className={s.imageStage}
+                    onTouchStart={onTouchStart}
+                    onTouchMove={onTouchMove}
+                    onTouchEnd={onTouchEnd}>
                     <img
                         key={imageUrl}
                         src={imageUrl}

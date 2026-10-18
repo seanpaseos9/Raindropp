@@ -1,6 +1,7 @@
 import s from './rating.module.styl'
 import React, { useState, useCallback } from 'react'
 import { Label } from '~co/common/form'
+import { getRatingColor } from './ratingColors'
 
 export default function BookmarkEditFormRating({ item = {}, onChange, onSave }) {
     const { _id, rating = 0 } = item
@@ -51,11 +52,13 @@ export default function BookmarkEditFormRating({ item = {}, onChange, onSave }) 
                 <div className={s.starGroup}>
                     {[1, 2, 3, 4, 5].map(star => {
                         const filled = star <= currentScore
+                        const activeColor = getRatingColor(currentScore)
                         return (
                             <button
                                 key={star}
                                 type='button'
                                 className={`${s.starBtn} ${filled ? s.filled : ''}`}
+                                style={filled ? { color: activeColor, textShadow: `0 0 1px ${activeColor}` } : {}}
                                 onMouseEnter={() => setHoverRating(star)}
                                 onMouseLeave={() => setHoverRating(0)}
                                 onClick={(e) => onRate(star, e)}
@@ -66,7 +69,9 @@ export default function BookmarkEditFormRating({ item = {}, onChange, onSave }) 
                     })}
                 </div>
 
-                <span className={s.scoreLabel}>
+                <span 
+                    className={s.scoreLabel}
+                    style={currentScore > 0 ? { color: getRatingColor(currentScore), fontWeight: 700 } : {}}>
                     {currentScore > 0 ? `${currentScore} / 5` : 'Unrated'}
                 </span>
 

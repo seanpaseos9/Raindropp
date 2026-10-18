@@ -4,7 +4,7 @@ import s from './lightbox.module.styl'
 import StarRating from './rating'
 import { handleImageLoadError } from './helper'
 
-export default function Lightbox({ images = [], initialIndex = 0, onClose, onUpdateRating, onUpdateCaption }) {
+export default function Lightbox({ images = [], initialIndex = 0, onClose, onUpdateRating, onUpdateCaption, onDeleteImage }) {
     const [index, setIndex] = useState(initialIndex)
     const [zoom, setZoom] = useState(1)
     const [offset, setOffset] = useState({ x: 0, y: 0 })
@@ -14,6 +14,7 @@ export default function Lightbox({ images = [], initialIndex = 0, onClose, onUpd
 
     const dragStartRef = useRef({ x: 0, y: 0 })
     const touchStartRef = useRef({ x: 0, y: 0, time: 0 })
+    const pinchDistanceRef = useRef(null)
 
     const total = images.length
     const current = images[index] || {}
@@ -78,8 +79,19 @@ export default function Lightbox({ images = [], initialIndex = 0, onClose, onUpd
         return () => window.removeEventListener('keydown', onKeyDown)
     }, [onClose, goPrev, goNext, zoomIn, zoomOut, isEditingCaption])
 
-    // Touch events for swiping left/right
+    // Touch events for mobile pinch-to-zoom and swiping left/right
     const onTouchStart = (e) => {
+        if (e.touches.length === 2) {
+            // Prevent whole-page zooming on mobile
+            if (e.cancelable) e.preventDefault()
+            const dist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            )
+            pinchDistanceRef.current = { dist, initialZoom: zoom }
+            return
+        }
+
         if (e.touches.length === 1) {
             touchStartRef.current = {
                 x: e.touches[0].clientX,
@@ -96,6 +108,20 @@ export default function Lightbox({ images = [], initialIndex = 0, onClose, onUpd
     }
 
     const onTouchMove = (e) => {
+        // Pinch-to-zoom scaling
+        if (e.touches.length === 2 && pinchDistanceRef.current) {
+            if (e.cancelable) e.preventDefault()
+            const dist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            )
+            const factor = dist / (pinchDistanceRef.current.dist || 1)
+            const nextZoom = Math.min(3.5, Math.max(1, +(pinchDistanceRef.current.initialZoom * factor).toFixed(2)))
+            setZoom(nextZoom)
+            return
+        }
+
+        // Dragging when zoomed
         if (zoom > 1 && e.touches.length === 1) {
             setOffset({
                 x: e.touches[0].clientX - dragStartRef.current.x,
@@ -105,6 +131,12 @@ export default function Lightbox({ images = [], initialIndex = 0, onClose, onUpd
     }
 
     const onTouchEnd = (e) => {
+        if (pinchDistanceRef.current) {
+            pinchDistanceRef.current = null
+            if (zoom <= 1) setOffset({ x: 0, y: 0 })
+            return
+        }
+
         if (zoom === 1 && e.changedTouches.length === 1) {
             const deltaX = e.changedTouches[0].clientX - touchStartRef.current.x
             const deltaY = e.changedTouches[0].clientY - touchStartRef.current.y
@@ -231,6 +263,26 @@ export default function Lightbox({ images = [], initialIndex = 0, onClose, onUpd
                 </div>
 
                 <div className={s.actions}>
+                    {onDeleteImage && (
+                        <button
+                            type='button'
+                            className={s.toolButton}
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                if (window.confirm('Delete this photo attachment? (🗑️)')) {
+                                    onDeleteImage(current)
+                                    if (total <= 1) {
+                                        onClose()
+                                    } else {
+                                        goNext()
+                                    }
+                                }
+                            }}
+                            title='Delete photo (🗑️)'
+                            style={{ color: '#ff3b30' }}>
+                            🗑️ Delete
+                        </button>
+                    )}
                     <a
                         href={current.originalUrl || current.url}
                         target='_blank'
