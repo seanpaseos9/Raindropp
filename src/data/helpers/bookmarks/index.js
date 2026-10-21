@@ -67,7 +67,7 @@ export const getDraft = (drafts, _id)=>{
 function parseNoteMetadata(note) {
 	if (!note) return {}
 	try {
-		const m = note.match(/<!--rd:(\{[^}]*\})-->/)
+		const m = note.match(/<!--rd:(\{[\s\S]*?\})-->/)
 		if (m) return JSON.parse(m[1])
 	} catch (e) {}
 	return {}
@@ -78,15 +78,26 @@ export function buildNoteMetadata(fields = {}) {
 	const clean = {}
 	if (typeof fields.read !== 'undefined') clean.r = fields.read ? 1 : 0
 	if (typeof fields.lastChapter !== 'undefined' && fields.lastChapter !== '') clean.ch = String(fields.lastChapter)
+	if (typeof fields.rating !== 'undefined') clean.star = Math.max(0, Math.min(5, parseInt(fields.rating, 10) || 0))
 	if (!Object.keys(clean).length) return null
 	return `<!--rd:${JSON.stringify(clean)}-->`
 }
 
 // Inject/update metadata comment in a note string (replaces existing or appends)
 export function injectNoteMetadata(note = '', fields = {}) {
-	const tag = buildNoteMetadata(fields)
-	const stripped = note.replace(/<!--rd:\{[^}]*\}-->/g, '').trimEnd()
-	if (!tag) return stripped
+	const existing = parseNoteMetadata(note)
+	const merged = { ...existing }
+	if (typeof fields.read !== 'undefined') merged.r = fields.read ? 1 : 0
+	if (typeof fields.lastChapter !== 'undefined') {
+		if (fields.lastChapter === '') delete merged.ch
+		else merged.ch = String(fields.lastChapter)
+	}
+	if (typeof fields.rating !== 'undefined') {
+		merged.star = Math.max(0, Math.min(5, parseInt(fields.rating, 10) || 0))
+	}
+	const stripped = note.replace(/<!--rd:\{[\s\S]*?\}-->/g, '').trimEnd()
+	if (!Object.keys(merged).length) return stripped
+	const tag = `<!--rd:${JSON.stringify(merged)}-->`
 	return stripped ? `${stripped}\n${tag}` : tag
 }
 
@@ -120,19 +131,24 @@ export const normalizeBookmark = (item={}, options)=>{
 		cache:			item.cache ? item.cache.status : '',
 		fileType:		item.fileType || (item.file ? item.file.type : null),
 		reminder:		{ date: item.reminder?.date || undefined },
-		// Priority: item field > note metadata (cross-device) > localStorage (same-browser fallback)
-		rating: 		Math.max(0, Math.min(5, parseInt(item.rating || (ls ? ls.getItem(`raindrop_rating_${item._id}`) : 0) || 0))),
-		read: 			Boolean(
-							typeof item.read !== 'undefined' ? item.read :
-							typeof noteMeta.r !== 'undefined' ? Boolean(noteMeta.r) :
-							(ls && ls.getItem(`raindrop_read_${item._id}`) === 'true')
-						),
-		lastChapter: 	String(
-							item.lastChapter ||
-							noteMeta.ch ||
-							(ls ? ls.getItem(`raindrop_chapter_${item._id}`) : '') ||
-							''
-						)
+		// NOTE: Raindrop API does not store rating/read/lastChapter natively.
+		// API always returns them as 0/false - do NOT let those override note metadata.
+		rating: 		(()=>{
+							if (item.rating > 0) return Math.min(5, parseInt(item.rating))
+							if (typeof noteMeta.star !== 'undefined') return Math.max(0, Math.min(5, parseInt(noteMeta.star, 10) || 0))
+							const lsR = ls ? parseInt(ls.getItem(`raindrop_rating_${item._id}`) || 0) : 0
+							return Math.max(0, Math.min(5, lsR || 0))
+						})(),
+		read: 			(()=>{
+							if (item.read === true) return true
+							if (typeof noteMeta.r !== 'undefined') return Boolean(noteMeta.r)
+							return ls ? ls.getItem(`raindrop_read_${item._id}`) === 'true' : false
+						})(),
+		lastChapter: 	(()=>{
+							if (item.lastChapter) return String(item.lastChapter)
+							if (noteMeta.ch) return String(noteMeta.ch)
+							return ls ? (ls.getItem(`raindrop_chapter_${item._id}`) || '') : ''
+						})()
 	}
 
 	if (!options.flat)

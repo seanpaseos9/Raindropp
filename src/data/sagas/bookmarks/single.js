@@ -191,16 +191,17 @@ function* updateBookmark({_id, set={}, ignore=false, onSuccess, onFail}) {
 		}
 	} catch (e) {}
 
-	// Cross-device persistence: embed read/lastChapter into note as <!--rd:{...}-->
+	// Cross-device persistence: embed read/lastChapter/rating into note metadata.
 	let finalSet = { ...set }
-	if (typeof set.read !== 'undefined' || typeof set.lastChapter !== 'undefined') {
+	if (typeof set.read !== 'undefined' || typeof set.lastChapter !== 'undefined' || typeof set.rating !== 'undefined') {
 		try {
 			const state = yield select()
 			const currentItem = state.bookmarks?.elements?.[_id]
 			const currentNote = (typeof set.note !== 'undefined' ? set.note : currentItem?.note) || ''
 			const metaFields = {
 				read: typeof set.read !== 'undefined' ? set.read : currentItem?.read,
-				lastChapter: typeof set.lastChapter !== 'undefined' ? set.lastChapter : currentItem?.lastChapter
+				lastChapter: typeof set.lastChapter !== 'undefined' ? set.lastChapter : currentItem?.lastChapter,
+				rating: typeof set.rating !== 'undefined' ? set.rating : currentItem?.rating
 			}
 			finalSet.note = injectNoteMetadata(currentNote, metaFields)
 		} catch (e) {}
