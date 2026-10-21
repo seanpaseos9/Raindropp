@@ -7,15 +7,20 @@
 
 function getTitleFromUrl(url) {
     try {
+        // data: URLs (uploaded files) – show generic short name
+        if (url && url.startsWith('data:')) return 'Uploaded Photo'
+
         const parsed = new URL(url.startsWith('http') ? url : `https://${url}`)
         const pathname = parsed.pathname || ''
+        // Strip leading underscores and dots, common on manga/image sites (e.g. _016.webp)
         const rawFilename = pathname.split('/').filter(Boolean).pop() || ''
         if (rawFilename && !/^[0-9a-f]{20,}$/i.test(rawFilename)) {
             const clean = decodeURIComponent(rawFilename)
+                .replace(/^[_. ]+/, '')          // strip leading underscores/dots
                 .replace(/[-_]+/g, ' ')
                 .replace(/\.[a-zA-Z0-9]+$/, '')
                 .trim()
-            if (clean.length > 1 && clean.length < 50) return clean
+            if (clean.length > 0 && clean.length < 60) return clean
         }
         const domain = parsed.hostname.replace(/^www\./, '')
         return `${domain} Image`
@@ -100,13 +105,40 @@ export function transformImageUrl(rawUrl, isExplicit = false) {
         const pathname = trimmed.split('?')[0].split('#')[0]
         const rawFilename = pathname.split('/').pop() || 'Photo'
         const cleanName = decodeURIComponent(rawFilename)
+            .replace(/^[_. ]+/, '')          // strip leading underscores/dots (e.g. _016.webp)
             .replace(/[-_]+/g, ' ')
             .replace(/\.[a-zA-Z0-9]+$/, '')
+            .trim()
         return {
             url: trimmed,
             fallbackUrl: `https://images.weserv.nl/?url=${encodeURIComponent(trimmed)}`,
             defaultTitle: cleanName || 'Photo',
             source: 'Image'
+        }
+    }
+
+    // 6b. Facebook photo / share links — extract the OG image via weserv proxy
+    // facebook.com/photo?fbid=..., fb.watch, fb.com shared image links
+    const fbMatch = trimmed.match(/(?:facebook\.com|fb\.com|m\.facebook\.com)\/(?:photo(?:s\/[a-z])?(?:\.php)?|story\.php|permalink\.php|media|[^/]+\/photos)\/?.*/i)
+    if (fbMatch) {
+        return {
+            url: `https://images.weserv.nl/?url=${encodeURIComponent(trimmed)}&output=jpg`,
+            fallbackUrl: trimmed,
+            defaultTitle: 'Facebook Photo',
+            source: 'Facebook'
+        }
+    }
+
+    // 6c. Twitter/X tweet & media links
+    // https://twitter.com/user/status/ID or https://x.com/user/status/ID
+    const twitterStatusMatch = trimmed.match(/(?:twitter\.com|x\.com)\/[^/]+\/status\/([0-9]+)/i)
+    if (twitterStatusMatch) {
+        const tweetId = twitterStatusMatch[1]
+        return {
+            url: `https://pbs.twimg.com/tweet_video_thumb/${tweetId}.jpg`,
+            fallbackUrl: `https://images.weserv.nl/?url=${encodeURIComponent(trimmed)}`,
+            defaultTitle: 'Twitter/X Media',
+            source: 'Twitter/X'
         }
     }
 
@@ -124,7 +156,7 @@ export function transformImageUrl(rawUrl, isExplicit = false) {
     }
 
     // 8. Common image hosts and CDNs where "Copy Image Address" often lacks standard file extensions
-    const isImageHost = /(?:images\.unsplash\.com|unsplash\.com\/photos|pbs\.twimg\.com|twimg\.com|i\.redd\.it|preview\.redd\.it|external-preview\.redd\.it|cdn\.discordapp\.com|media\.discordapp\.net|blogger\.googleusercontent\.com|cdninstagram\.com|instagram\.f[a-z0-9-]+\.net|i\.pinimg\.com|pinimg\.com|cloudinary\.com|staticflickr\.com|flickr\.com|media\.giphy\.com|giphy\.com|c\.tenor\.com|tenor\.com|upload\.wikimedia\.org|user-images\.githubusercontent\.com|raw\.githubusercontent\.com|avatars\.githubusercontent\.com|i[0-9]\.wp\.com|gravatar\.com|cdn\.shopify\.com|imagedelivery\.net|cloudfront\.net|fbcdn\.net|freepik\.com|pexels\.com|pixabay\.com|alamy\.com|gettyimages\.com|istockphoto\.com|wixstatic\.com|squarespace-cdn\.com)/i.test(trimmed)
+    const isImageHost = /(?:images\.unsplash\.com|unsplash\.com\/photos|pbs\.twimg\.com|twimg\.com|video\.twimg\.com|abs\.twimg\.com|ton\.twimg\.com|i\.redd\.it|preview\.redd\.it|external-preview\.redd\.it|cdn\.discordapp\.com|media\.discordapp\.net|blogger\.googleusercontent\.com|cdninstagram\.com|instagram\.f[a-z0-9-]+\.net|i\.pinimg\.com|pinimg\.com|cloudinary\.com|staticflickr\.com|flickr\.com|media\.giphy\.com|giphy\.com|c\.tenor\.com|tenor\.com|upload\.wikimedia\.org|user-images\.githubusercontent\.com|raw\.githubusercontent\.com|avatars\.githubusercontent\.com|i[0-9]\.wp\.com|gravatar\.com|cdn\.shopify\.com|imagedelivery\.net|cloudfront\.net|fbcdn\.net|scontent\.f[a-z0-9-]+\.fna\.fbcdn\.net|scontent[0-9-]*\.xx\.fbcdn\.net|lookaside\.fbsbx\.com|platform-lookaside\.fbsbx\.com|freepik\.com|pexels\.com|pixabay\.com|alamy\.com|gettyimages\.com|istockphoto\.com|wixstatic\.com|squarespace-cdn\.com|myreadingmanga\.info|manga\.life|mangadex\.org|webtoons\.com|tapas\.io|nhentai\.net|mangakakalot\.com|manganelo\.com|readmangas?\.com|chapmanganato\.to|i\.imgur\.com|prnt\.sc|prntscr\.com|postimg\.cc|imgbb\.com|ibb\.co)/i.test(trimmed)
     if (isImageHost) {
         return {
             url: trimmed,

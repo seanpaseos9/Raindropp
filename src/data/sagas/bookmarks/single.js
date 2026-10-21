@@ -1,6 +1,7 @@
 import { call, put, takeEvery, select } from 'redux-saga/effects'
 import Api from '../../modules/api'
 import _ from 'lodash-es'
+import { injectNoteMetadata } from '../../helpers/bookmarks'
 
 import {
 	BOOKMARK_LOAD_REQ, BOOKMARK_LOAD_SUCCESS, BOOKMARK_LOAD_ERROR,
@@ -178,7 +179,7 @@ function* updateBookmark({_id, set={}, ignore=false, onSuccess, onFail}) {
 	if ((ignore)||(!_id))
 		return;
 
-	// Local persistence
+	// Local persistence (same-browser fallback)
 	try {
 		if (typeof window !== 'undefined' && window.localStorage) {
 			if (typeof set.read !== 'undefined') window.localStorage.setItem(`raindrop_read_${_id}`, String(set.read))
@@ -190,10 +191,25 @@ function* updateBookmark({_id, set={}, ignore=false, onSuccess, onFail}) {
 		}
 	} catch (e) {}
 
+	// Cross-device persistence: embed read/lastChapter into note as <!--rd:{...}-->
+	let finalSet = { ...set }
+	if (typeof set.read !== 'undefined' || typeof set.lastChapter !== 'undefined') {
+		try {
+			const state = yield select()
+			const currentItem = state.bookmarks?.elements?.[_id]
+			const currentNote = (typeof set.note !== 'undefined' ? set.note : currentItem?.note) || ''
+			const metaFields = {
+				read: typeof set.read !== 'undefined' ? set.read : currentItem?.read,
+				lastChapter: typeof set.lastChapter !== 'undefined' ? set.lastChapter : currentItem?.lastChapter
+			}
+			finalSet.note = injectNoteMetadata(currentNote, metaFields)
+		} catch (e) {}
+	}
+
 	try{
-		let { item={} } = yield call(Api.put, 'raindrop/'+_id, set)
+		let { item={} } = yield call(Api.put, 'raindrop/'+_id, finalSet)
 		// Ensure custom fields persist even if backend trims them
-		item = { ...set, ...item, _id }
+		item = { ...finalSet, ...item, _id }
 
 		yield put({
 			type: BOOKMARK_UPDATE_SUCCESS,

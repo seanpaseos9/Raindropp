@@ -102,7 +102,12 @@ export default class BookmarkItemCover extends React.PureComponent {
                     if (match) cleanCover = match[0]
                     const transformed = transformImageUrl(cleanCover, true)
                     const finalCover = transformed ? transformed.url : cleanCover
-                    uri = getUri(finalCover)
+                    // For data: URLs or already-CDN URLs, skip the rdl.ink proxy
+                    if (finalCover.startsWith('data:') || finalCover.includes('images.weserv.nl') || finalCover.includes('drive.google.com/thumbnail')) {
+                        uri = finalCover
+                    } else {
+                        uri = getUri(finalCover)
+                    }
                 }
                 else if (link)
                     uri = getUri(link, 'screenshot')
@@ -120,10 +125,15 @@ export default class BookmarkItemCover extends React.PureComponent {
                 break
         }
 
+        // Check if uri is a direct image (data: or non-rdl.ink CDN) — skip thumb query params
+        const isDirectUri = uri && (uri.startsWith('data:') || uri.includes('images.weserv.nl') || uri.includes('drive.google.com/thumbnail'))
+        const srcUrl = isDirectUri ? uri : (uri && `${uri}?mode=${mode}&fill=solid&width=${width||''}&ar=${ar||''}&dpr=${dpr[view]||dpr.default}`)
+        const srcSetUrl = isDirectUri ? uri : (uri && `${uri}?mode=${mode}&fill=solid&format=webp&width=${width||''}&ar=${ar||''}&dpr=${dpr[view]||dpr.default}`)
+
         return (
             <>
                 <source
-                    srcSet={uri && `${uri}?mode=${mode}&fill=solid&format=webp&width=${width||''}&ar=${ar||''}&dpr=${dpr[view]||dpr.default}`}
+                    srcSet={srcSetUrl}
                     type='image/webp' />
 
                 <img 
@@ -135,7 +145,7 @@ export default class BookmarkItemCover extends React.PureComponent {
                     alt=' '
                     referrerPolicy='no-referrer'
                     {...etc}
-                    src={uri && `${uri}?mode=${mode}&fill=solid&width=${width||''}&ar=${ar||''}&dpr=${dpr[view]||dpr.default}`}
+                    src={srcUrl}
                     //type='image/jpeg'
                     onLoadStart={indicator ? this.onImageLoadStart : undefined}
                     onLoad={indicator ? this.onImageLoadSuccess : undefined}
