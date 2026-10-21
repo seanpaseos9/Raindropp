@@ -1,8 +1,9 @@
 import _ from 'lodash'
-import { call, put, takeEvery, select } from 'redux-saga/effects'
+import { all, call, put, takeEvery, select } from 'redux-saga/effects'
 import Api from '../../modules/api'
-import { getUrl, findDuplicateBookmarks } from '../../helpers/bookmarks'
+import { getUrl, findDuplicateBookmarks, normalizeBookmark } from '../../helpers/bookmarks'
 import { COLLECTION_UPDATE_COUNT } from '../../constants/collections'
+import { SPACE_PER_PAGE } from '../../constants/bookmarks'
 
 import {
 	SPACE_LOAD_PRE, SPACE_LOAD_REQ, SPACE_LOAD_SUCCESS, SPACE_LOAD_ERROR,
@@ -13,6 +14,31 @@ import {
 	SPACE_VIEW_CONFIG
 } from '../../constants/bookmarks'
 import { USER_UPDATE_REQ } from '../../constants/user'
+
+function parseSearchFilters(search = '') {
+	const filters = []
+	const text = String(search).replace(/(?:^|\s)(is:(?:read|unread)|rating:(?:unrated|[0-5]))(?=\s|$)/gi, (token) => {
+		filters.push(token.trim().toLowerCase())
+		return ' '
+	}).replace(/\s+/g, ' ').trim()
+
+	return { filters, text }
+}
+
+function matchesSearchFilters(bookmark, filters) {
+	const item = normalizeBookmark(bookmark)
+	return filters.every(filter => {
+		if (filter === 'is:read') return item.read === true
+		if (filter === 'is:unread') return item.read !== true
+		if (filter === 'rating:unrated' || filter === 'rating:0') return item.rating === 0
+		if (filter.startsWith('rating:')) return item.rating === parseInt(filter.slice(7), 10)
+		return true
+	})
+}
+
+function hasSearchFilters(filters) {
+	return filters.length > 0
+}
 
 //Requests
 export default function* () {
@@ -85,40 +111,25 @@ function* loadSpace({spaceId, query, ignore=false}) {
 				duplicateItems = findDuplicateBookmarks(Array.from(map.values()))
 			} catch (e) {}
 
+			const { filters, text } = parseSearchFilters(query?.search || '')
+
 			// Fallback to server search query if local detection found none
 			if (!duplicateItems.length) {
 				try {
-					const sRes = yield call(Api.get, `raindrops/${getUrl(spaceId, query)}`)
+					const sRes = yield call(Api.get, `raindrops/${getUrl(spaceId, { ...query, search: text })}`)
 					if (sRes.items && sRes.items.length) {
 						duplicateItems = sRes.items
 					}
 				} catch (e) {}
 			}
 
-			// Apply search filter if query has search string
-			if (query && query.search) {
-				const sLower = query.search
-					.replace(/\bis:read\b/gi, '')
-					.replace(/\bis:unread\b/gi, '')
-					.trim()
-					.toLowerCase()
-
-				if (sLower) {
-					duplicateItems = duplicateItems.filter(b => 
-						((b.title || '') + ' ' + (b.excerpt || '') + ' ' + (b.link || '')).toLowerCase().includes(sLower)
-					)
-				}
-
-				if (/\bis:read\b/i.test(query.search)) {
-					duplicateItems = duplicateItems.filter(b => 
-						Boolean(b.read || (typeof window !== 'undefined' && window.localStorage && window.localStorage.getItem(`raindrop_read_${b._id}`) === 'true')) === true
-					)
-				} else if (/\bis:unread\b/i.test(query.search)) {
-					duplicateItems = duplicateItems.filter(b => 
-						Boolean(b.read || (typeof window !== 'undefined' && window.localStorage && window.localStorage.getItem(`raindrop_read_${b._id}`) === 'true')) === false
-					)
-				}
+			if (text) {
+				const sLower = text.toLowerCase()
+				duplicateItems = duplicateItems.filter(b =>
+					((b.title || '') + ' ' + (b.excerpt || '') + ' ' + (b.link || '')).toLowerCase().includes(sLower)
+				)
 			}
+			duplicateItems = duplicateItems.filter(b => matchesSearchFilters(b, filters))
 
 			items = duplicateItems
 			count = duplicateItems.length
@@ -130,44 +141,47 @@ function* loadSpace({spaceId, query, ignore=false}) {
 				count: duplicateItems.length
 			})
 		} else {
-			let isReadFilter = null
-			let apiQuery = query
-			if (query && query.search) {
-				if (/\bis:read\b/i.test(query.search)) {
-					isReadFilter = true
-				} else if (/\bis:unread\b/i.test(query.search)) {
-					isReadFilter = false
+			const { filters, text } = parseSearchFilters(query?.search || '')
+			const apiQuery = filters.length ? { ...query, search: text } : query
+			let fetchedItems = []
+			let res
+
+			if (hasSearchFilters(filters)) {
+				// Fetch the first page for the total, then load remaining pages in small batches.
+				res = yield call(Api.get, `raindrops/${getUrl(spaceId, { ...apiQuery, page: 0 })}`)
+				fetchedItems = res.items || []
+				const reportedCount = Number(res.count)
+				const totalPages = reportedCount > 0
+					? Math.ceil(reportedCount / SPACE_PER_PAGE)
+					: (fetchedItems.length < SPACE_PER_PAGE ? 1 : Infinity)
+				const pagesPerBatch = 5
+
+				for (let startPage = 1; startPage < totalPages; startPage += pagesPerBatch) {
+					const endPage = Math.min(startPage + pagesPerBatch, totalPages)
+					const pageResults = yield all(Array.from(
+						{ length: endPage - startPage },
+						(_, index) => call(Api.get, `raindrops/${getUrl(spaceId, { ...apiQuery, page: startPage + index })}`)
+					))
+					pageResults.forEach(pageResult => {
+						fetchedItems = fetchedItems.concat(pageResult.items || [])
+					})
+					if (totalPages === Infinity && pageResults.some(pageResult => (pageResult.items || []).length < SPACE_PER_PAGE)) break
 				}
 
-				if (isReadFilter !== null) {
-					const cleanSearch = query.search
-						.replace(/\bis:read\b/gi, '')
-						.replace(/\bis:unread\b/gi, '')
-						.trim()
-					apiQuery = { ...query, search: cleanSearch }
-				}
+				const seenIds = new Set()
+				fetchedItems = fetchedItems.filter(item => {
+					if (!item?._id) return true
+					if (seenIds.has(item._id)) return false
+					seenIds.add(item._id)
+					return true
+				})
+			} else {
+				res = yield call(Api.get, `raindrops/${getUrl(spaceId, apiQuery)}`)
+				fetchedItems = res.items || []
 			}
 
-			const res = yield call(Api.get, `raindrops/${getUrl(spaceId, apiQuery)}`)
-			let fetchedItems = res.items || []
-
-			if (isReadFilter !== null) {
-				const state = yield select()
-				const existing = Object.values(state.bookmarks?.elements || {}).filter(b => 
-					parseInt(spaceId) === 0 || b.collectionId === parseInt(spaceId)
-				)
-				const map = new Map()
-				for (const b of fetchedItems) {
-					if (b && b._id) map.set(b._id, b)
-				}
-				for (const b of existing) {
-					if (b && b._id && !map.has(b._id)) map.set(b._id, b)
-				}
-
-				items = Array.from(map.values()).filter(b => {
-					const isRead = Boolean(b.read || (typeof window !== 'undefined' && window.localStorage && window.localStorage.getItem(`raindrop_read_${b._id}`) === 'true'))
-					return isRead === isReadFilter
-				})
+			if (hasSearchFilters(filters)) {
+				items = fetchedItems.filter(b => matchesSearchFilters(b, filters))
 				count = items.length
 			} else {
 				items = fetchedItems
