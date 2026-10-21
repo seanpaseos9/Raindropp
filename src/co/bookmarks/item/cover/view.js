@@ -102,8 +102,23 @@ export default class BookmarkItemCover extends React.PureComponent {
                     if (match) cleanCover = match[0]
                     const transformed = transformImageUrl(cleanCover, true)
                     const finalCover = transformed ? transformed.url : cleanCover
-                    // For data: URLs or already-CDN URLs, skip the rdl.ink proxy
-                    if (finalCover.startsWith('data:') || finalCover.includes('images.weserv.nl') || finalCover.includes('drive.google.com/thumbnail')) {
+                    // For data: URLs or CDN/social URLs, skip the rdl.ink proxy to avoid double-proxying
+                    const isCdnUrl = (
+                        finalCover.startsWith('data:') ||
+                        finalCover.includes('images.weserv.nl') ||
+                        finalCover.includes('drive.google.com/thumbnail') ||
+                        finalCover.includes('drive.usercontent.google.com') ||
+                        finalCover.includes('googleusercontent.com') ||
+                        /pbs\.twimg\.com|twimg\.com/i.test(finalCover) ||
+                        /fbcdn\.net|scontent\./i.test(finalCover) ||
+                        /imgur\.com/i.test(finalCover) ||
+                        /cloudinary\.com|imagedelivery\.net/i.test(finalCover) ||
+                        /pinimg\.com/i.test(finalCover) ||
+                        /discordapp\.com|discordapp\.net/i.test(finalCover) ||
+                        /myreadingmanga\.info|mangadex\.org/i.test(finalCover) ||
+                        /imgbb\.com|postimg\.cc|ibb\.co/i.test(finalCover)
+                    )
+                    if (isCdnUrl) {
                         uri = finalCover
                     } else {
                         uri = getUri(finalCover)
@@ -125,10 +140,27 @@ export default class BookmarkItemCover extends React.PureComponent {
                 break
         }
 
-        // Check if uri is a direct image (data: or non-rdl.ink CDN) — skip thumb query params
-        const isDirectUri = uri && (uri.startsWith('data:') || uri.includes('images.weserv.nl') || uri.includes('drive.google.com/thumbnail'))
+        // Skip rdl.ink thumb proxy for: data: blobs, weserv proxy URLs, Google Drive CDN,
+        // and any social/CDN image URL that is already a direct image host.
+        // These fail when double-proxied through rdl.ink.
+        const isDirectUri = uri && (
+            uri.startsWith('data:') ||
+            uri.includes('images.weserv.nl') ||
+            uri.includes('drive.google.com/thumbnail') ||
+            uri.includes('drive.usercontent.google.com') ||
+            uri.includes('googleusercontent.com') ||
+            /pbs\.twimg\.com|twimg\.com/i.test(uri) ||
+            /fbcdn\.net|scontent\./i.test(uri) ||
+            /imgur\.com/i.test(uri) ||
+            /cloudinary\.com/i.test(uri) ||
+            /imagedelivery\.net/i.test(uri) ||
+            /pinimg\.com/i.test(uri) ||
+            /discordapp\.com|discordapp\.net/i.test(uri) ||
+            /myreadingmanga\.info|mangadex\.org|webtoons\.com/i.test(uri) ||
+            /imgbb\.com|postimg\.cc|ibb\.co/i.test(uri)
+        )
         const srcUrl = isDirectUri ? uri : (uri && `${uri}?mode=${mode}&fill=solid&width=${width||''}&ar=${ar||''}&dpr=${dpr[view]||dpr.default}`)
-        const srcSetUrl = isDirectUri ? uri : (uri && `${uri}?mode=${mode}&fill=solid&format=webp&width=${width||''}&ar=${ar||''}&dpr=${dpr[view]||dpr.default}`)
+        const srcSetUrl = isDirectUri ? srcUrl : (uri && `${uri}?mode=${mode}&fill=solid&format=webp&width=${width||''}&ar=${ar||''}&dpr=${dpr[view]||dpr.default}`)
 
         return (
             <>

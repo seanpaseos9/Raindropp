@@ -29,6 +29,18 @@ function getTitleFromUrl(url) {
     }
 }
 
+
+/**
+ * Truncates a display title to a clean short label suitable for the carousel caption bar.
+ * Keeps the filename extension visible if present and within limit.
+ */
+export function truncateTitle(title = '', maxLen = 38) {
+    if (!title) return 'Photo'
+    const t = String(title).trim()
+    if (t.length <= maxLen) return t
+    return t.slice(0, maxLen - 1).trimEnd() + '…'
+}
+
 export function transformImageUrl(rawUrl, isExplicit = false) {
     if (!rawUrl || typeof rawUrl !== 'string') return null
 
@@ -129,15 +141,39 @@ export function transformImageUrl(rawUrl, isExplicit = false) {
         }
     }
 
-    // 6c. Twitter/X tweet & media links
-    // https://twitter.com/user/status/ID or https://x.com/user/status/ID
-    const twitterStatusMatch = trimmed.match(/(?:twitter\.com|x\.com)\/[^/]+\/status\/([0-9]+)/i)
-    if (twitterStatusMatch) {
-        const tweetId = twitterStatusMatch[1]
+    // 6c. Twitter/X pbs.twimg.com direct media URLs (from "Copy Image Address")
+    // These look like: https://pbs.twimg.com/media/XXXX?format=jpg&name=large
+    // Use weserv as primary proxy so Twitter's referer checks are bypassed server-side.
+    if (/pbs\.twimg\.com\/media\/|pbs\.twimg\.com\/card_img\//i.test(trimmed)) {
+        // Normalize: ensure format=jpg&name=orig for highest quality
+        let twitterUrl = trimmed
+        if (!twitterUrl.includes('format=')) {
+            twitterUrl = twitterUrl + (twitterUrl.includes('?') ? '&' : '?') + 'format=jpg&name=orig'
+        } else {
+            // Upgrade to orig size
+            twitterUrl = twitterUrl.replace(/name=[a-z0-9]+/i, 'name=orig')
+        }
         return {
-            url: `https://pbs.twimg.com/tweet_video_thumb/${tweetId}.jpg`,
-            fallbackUrl: `https://images.weserv.nl/?url=${encodeURIComponent(trimmed)}`,
-            defaultTitle: 'Twitter/X Media',
+            url: `https://images.weserv.nl/?url=${encodeURIComponent(twitterUrl)}&output=jpg`,
+            fallbackUrl: twitterUrl,
+            originalUrl: twitterUrl,
+            defaultTitle: 'Twitter/X Photo',
+            source: 'Twitter/X'
+        }
+    }
+
+    // 6d. Twitter/X tweet status page URLs (twitter.com/user/status/ID or x.com/...)
+    // These are HTML pages not images — we use Twitter's card image API as best-effort.
+    const twitterStatusMatch = trimmed.match(/(?:twitter\.com|x\.com)\/([^/]+)\/status\/([0-9]+)/i)
+    if (twitterStatusMatch) {
+        const user = twitterStatusMatch[1]
+        const tweetId = twitterStatusMatch[2]
+        // Twitter card images pattern (works for media tweets)
+        const cardUrl = `https://pbs.twimg.com/card_img/${tweetId}/${user}?format=jpg&name=large`
+        return {
+            url: `https://images.weserv.nl/?url=${encodeURIComponent(cardUrl)}&output=jpg`,
+            fallbackUrl: `https://images.weserv.nl/?url=${encodeURIComponent(`https://pbs.twimg.com/media?tweet_id=${tweetId}`)}`,
+            defaultTitle: 'Twitter/X Tweet',
             source: 'Twitter/X'
         }
     }

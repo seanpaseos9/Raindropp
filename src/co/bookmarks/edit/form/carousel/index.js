@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react'
 import s from './index.module.styl'
 import Lightbox from './lightbox'
 import StarRating from './rating'
-import { formatMultipleImageEntries, handleImageLoadError } from './helper'
+import { formatMultipleImageEntries, handleImageLoadError, truncateTitle } from './helper'
 
 export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCaption, onUpdateRating, onDeleteImage }) {
     const [activeIndex, setActiveIndex] = useState(0)
@@ -383,6 +383,7 @@ export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCap
                                     className={s.image}
                                     loading='lazy'
                                     referrerPolicy='no-referrer'
+                                    crossOrigin='anonymous'
                                     onError={(e) => handleImageLoadError(e, item)}
                                 />
 
@@ -424,7 +425,9 @@ export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCap
                                 {!isEditingThisCaption ? (
                                     <div className={s.captionBar} onClick={e => e.stopPropagation()}>
                                         <div className={s.captionTitle} title={item.caption || item.title || 'Attached Image'}>
-                                            {item.caption ? `“${item.caption}”` : (item.title || 'Attached Photo')}
+                                            {item.caption
+                                                ? `"${truncateTitle(item.caption)}"`
+                                                : truncateTitle(item.title || 'Attached Photo')}
                                         </div>
                                         <div className={s.captionSubrow}>
                                             <div className={s.captionMeta}>
