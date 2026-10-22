@@ -209,8 +209,8 @@ function* updateBookmark({_id, set={}, ignore=false, onSuccess, onFail}) {
 
 	try{
 		let { item={} } = yield call(Api.put, 'raindrop/'+_id, finalSet)
-		// Ensure custom fields persist even if backend trims them
-		item = { ...finalSet, ...item, _id }
+		// Keep submitted note metadata authoritative if the API omits it from its response.
+		item = { ...item, ...finalSet, _id }
 
 		yield put({
 			type: BOOKMARK_UPDATE_SUCCESS,

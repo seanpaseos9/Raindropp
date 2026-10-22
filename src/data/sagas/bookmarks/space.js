@@ -1,7 +1,7 @@
 import _ from 'lodash'
-import { all, call, put, takeEvery, select } from 'redux-saga/effects'
+import { all, call, fork, put, takeEvery, select } from 'redux-saga/effects'
 import Api from '../../modules/api'
-import { getUrl, findDuplicateBookmarks, normalizeBookmark } from '../../helpers/bookmarks'
+import { getUrl, findDuplicateBookmarks, normalizeBookmark, parseNoteMetadata, injectNoteMetadata } from '../../helpers/bookmarks'
 import { COLLECTION_UPDATE_COUNT } from '../../constants/collections'
 import { SPACE_PER_PAGE } from '../../constants/bookmarks'
 
@@ -38,6 +38,58 @@ function matchesSearchFilters(bookmark, filters) {
 
 function hasSearchFilters(filters) {
 	return filters.length > 0
+}
+
+const legacyMetadataInFlight = new Set()
+
+function* saveLegacyMetadata(item, note) {
+	try {
+		yield call(Api.put, `raindrop/${item._id}`, { note })
+	} catch (e) {}
+	finally {
+		legacyMetadataInFlight.delete(item._id)
+	}
+}
+
+function* migrateLegacyMetadata(items = []) {
+	let storage
+	try {
+		storage = typeof window !== 'undefined' ? window.localStorage : null
+	} catch (e) {
+		return
+	}
+	if (!storage) return
+
+	const pending = []
+	for (const item of items) {
+		if (!item?._id || legacyMetadataInFlight.has(item._id)) continue
+		const metadata = parseNoteMetadata(item.note || '')
+		const fields = {}
+		let storedRead
+		let storedRating
+		let storedChapter
+		try {
+			storedRead = storage.getItem(`raindrop_read_${item._id}`)
+			storedRating = storage.getItem(`raindrop_rating_${item._id}`)
+			storedChapter = storage.getItem(`raindrop_chapter_${item._id}`)
+		} catch (e) {
+			continue
+		}
+
+		if (typeof metadata.r === 'undefined' && storedRead !== null) fields.read = storedRead === 'true'
+		if (typeof metadata.star === 'undefined' && storedRating !== null) fields.rating = storedRating
+		if (typeof metadata.ch === 'undefined' && storedChapter) fields.lastChapter = storedChapter
+		if (!Object.keys(fields).length) continue
+
+		const note = injectNoteMetadata(item.note || '', fields)
+		if (note === (item.note || '')) continue
+		legacyMetadataInFlight.add(item._id)
+		pending.push({ item, note })
+	}
+
+	for (const batch of _.chunk(pending, 5)) {
+		yield all(batch.map(({ item, note }) => call(saveLegacyMetadata, item, note)))
+	}
 }
 
 //Requests
@@ -175,9 +227,11 @@ function* loadSpace({spaceId, query, ignore=false}) {
 					seenIds.add(item._id)
 					return true
 				})
+				yield fork(migrateLegacyMetadata, fetchedItems)
 			} else {
 				res = yield call(Api.get, `raindrops/${getUrl(spaceId, apiQuery)}`)
 				fetchedItems = res.items || []
+				yield fork(migrateLegacyMetadata, fetchedItems)
 			}
 
 			if (hasSearchFilters(filters)) {

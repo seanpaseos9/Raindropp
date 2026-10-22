@@ -64,7 +64,7 @@ export const getDraft = (drafts, _id)=>{
 
 //Selector helpers
 // Parse cross-device metadata embedded in note as <!--rd:{...}-->
-function parseNoteMetadata(note) {
+export function parseNoteMetadata(note) {
 	if (!note) return {}
 	try {
 		const m = note.match(/<!--rd:(\{[\s\S]*?\})-->/)
@@ -134,14 +134,14 @@ export const normalizeBookmark = (item={}, options)=>{
 		// NOTE: Raindrop API does not store rating/read/lastChapter natively.
 		// API always returns them as 0/false - do NOT let those override note metadata.
 		rating: 		(()=>{
-							if (item.rating > 0) return Math.min(5, parseInt(item.rating))
 							if (typeof noteMeta.star !== 'undefined') return Math.max(0, Math.min(5, parseInt(noteMeta.star, 10) || 0))
+							if (item.rating > 0) return Math.min(5, parseInt(item.rating))
 							const lsR = ls ? parseInt(ls.getItem(`raindrop_rating_${item._id}`) || 0) : 0
 							return Math.max(0, Math.min(5, lsR || 0))
 						})(),
 		read: 			(()=>{
-							if (item.read === true) return true
 							if (typeof noteMeta.r !== 'undefined') return Boolean(noteMeta.r)
+							if (item.read === true) return true
 							return ls ? ls.getItem(`raindrop_read_${item._id}`) === 'true' : false
 						})(),
 		lastChapter: 	(()=>{
