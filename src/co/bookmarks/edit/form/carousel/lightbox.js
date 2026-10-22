@@ -327,7 +327,6 @@ export default function Lightbox({ images = [], initialIndex = 0, onClose, onUpd
                         alt={current.caption || current.title || 'Note Image'}
                         className={s.image}
                         referrerPolicy='no-referrer'
-                            crossOrigin='anonymous'
                         style={{
                             transform: `translate3d(${offset.x}px, ${offset.y}px, 0) scale(${zoom})`,
                             cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in'

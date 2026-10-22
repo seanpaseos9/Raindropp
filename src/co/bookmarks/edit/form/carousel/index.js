@@ -383,7 +383,6 @@ export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCap
                                     className={s.image}
                                     loading='lazy'
                                     referrerPolicy='no-referrer'
-                                    crossOrigin='anonymous'
                                     onError={(e) => handleImageLoadError(e, item)}
                                 />
 

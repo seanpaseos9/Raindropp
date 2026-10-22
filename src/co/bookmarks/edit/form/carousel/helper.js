@@ -47,6 +47,9 @@ export function transformImageUrl(rawUrl, isExplicit = false) {
     let trimmed = rawUrl.trim()
     if (!trimmed) return null
 
+    // Accept URLs copied from escaped Markdown/text (https\://...) and line continuations.
+    trimmed = trimmed.replace(/^(https?)\\:\/\//i, '$1://').replace(/\\+$/, '')
+
     // Unescape XML/HTML entities like &amp;
     trimmed = trimmed.replace(/&amp;/g, '&')
 
@@ -289,7 +292,7 @@ export function extractImageUrls(text = '', item = null) {
     const matchedRanges = []
 
     // 1. Scan for Markdown image syntax: ![caption/title](url "optional title")
-    const mdRegex = /!\[([^\]]*)\]\((https?:\/\/[^\s)"]+|data:image\/[^\s)"]+|[^\s)"]+)(?:\s+"([^"]*)")?\)/gi
+    const mdRegex = /!\[([^\]]*)\]\((https?\\?:\/\/[^\s)"]+|data:image\/[^\s)"]+|[^\s)"]+)(?:\s+"([^"]*)")?\)/gi
     let match
     while ((match = mdRegex.exec(rawText)) !== null) {
         const [fullMatch, alt, rawUrl, optionalTitle] = match
@@ -311,10 +314,10 @@ export function extractImageUrls(text = '', item = null) {
     }
 
     // 2. Scan for URLs followed by quotes: https://... "My Caption"
-    const quotedUrlRegex = /(https?:\/\/[^\s<>"')]+)\s+(?:"([^"]+)"|'([^']+)'|[-–—]\s*([^\n\r]+))/gi
+    const quotedUrlRegex = /(https?\\?:\/\/[^\s<>"')]+)\s+(?:"([^"]+)"|'([^']+)'|[-–—]\s*([^\n\r]+))/gi
     while ((match = quotedUrlRegex.exec(rawText)) !== null) {
         const [fullMatch, rawUrl, q1, q2, dashCaption] = match
-        const cleanRaw = rawUrl.replace(/[.,!?;:]+$/, '')
+        const cleanRaw = rawUrl.replace(/\\+$/, '').replace(/[.,!?;:]+$/, '')
         // Skip if this part was already matched inside markdown
         if (matchedRanges.some(m => m.includes(cleanRaw))) continue
 
@@ -337,10 +340,10 @@ export function extractImageUrls(text = '', item = null) {
     }
 
     // 3. Scan for standalone URLs in the text
-    const urlRegex = /(https?:\/\/[^\s<>"')]+|data:image\/[^\s<>"')]+)/gi
+    const urlRegex = /(https?\\?:\/\/[^\s<>"')]+|data:image\/[^\s<>"')]+)/gi
     while ((match = urlRegex.exec(rawText)) !== null) {
         const rawUrl = match[1]
-        const cleanRaw = rawUrl.replace(/[.,!?;:]+$/, '')
+        const cleanRaw = rawUrl.replace(/\\+$/, '').replace(/[.,!?;:]+$/, '')
         if (matchedRanges.some(m => m.includes(cleanRaw))) continue
 
         const info = transformImageUrl(cleanRaw, false)
@@ -464,7 +467,7 @@ export function formatMultipleImageEntries(rawInput = '', caption = '', rating =
     const dataUrlMatches = rawInput.match(/data:image\/[a-zA-Z0-9.+_-]+;[^\s"'<>)]+/gi) || []
 
     // Then extract http/https and Google Drive URLs (semicolons excluded as list separators)
-    const httpUrlMatches = rawInput.match(/https?:\/\/[^\s,;"'<>]+|drive\.google\.com\/[^\s,;"'<>]+/gi) || []
+    const httpUrlMatches = rawInput.match(/https?\\?:\/\/[^\s,;"'<>]+|drive\.google\.com\/[^\s,;"'<>]+/gi) || []
 
     const urlMatches = [...dataUrlMatches, ...httpUrlMatches]
 
@@ -474,7 +477,8 @@ export function formatMultipleImageEntries(rawInput = '', caption = '', rating =
 
     const entries = []
     candidates.forEach((rawUrl, idx) => {
-        let cleanUrl = rawUrl.trim()
+        let cleanUrl = rawUrl.trim().replace(/\\+$/, '')
+        cleanUrl = cleanUrl.replace(/^(https?)\\:\/\//i, '$1://')
         // Only strip trailing punctuation from non-data URLs to avoid corrupting base64 strings
         if (!cleanUrl.startsWith('data:')) {
             cleanUrl = cleanUrl.replace(/[.,;]+$/, '')

@@ -115,7 +115,6 @@ export default class BookmarkItemCover extends React.PureComponent {
                         /cloudinary\.com|imagedelivery\.net/i.test(finalCover) ||
                         /pinimg\.com/i.test(finalCover) ||
                         /discordapp\.com|discordapp\.net/i.test(finalCover) ||
-                        /myreadingmanga\.info|mangadex\.org/i.test(finalCover) ||
                         /imgbb\.com|postimg\.cc|ibb\.co/i.test(finalCover)
                     )
                     if (isCdnUrl) {
@@ -156,7 +155,7 @@ export default class BookmarkItemCover extends React.PureComponent {
             /imagedelivery\.net/i.test(uri) ||
             /pinimg\.com/i.test(uri) ||
             /discordapp\.com|discordapp\.net/i.test(uri) ||
-            /myreadingmanga\.info|mangadex\.org|webtoons\.com/i.test(uri) ||
+            /mangadex\.org|webtoons\.com/i.test(uri) ||
             /imgbb\.com|postimg\.cc|ibb\.co/i.test(uri)
         )
         const srcUrl = isDirectUri ? uri : (uri && `${uri}?mode=${mode}&fill=solid&width=${width||''}&ar=${ar||''}&dpr=${dpr[view]||dpr.default}`)
