@@ -51,7 +51,7 @@ export function transformImageUrl(rawUrl, isExplicit = false) {
     trimmed = trimmed.replace(/^(https?)\\:\/\//i, '$1://').replace(/\\+$/, '')
 
     // Unescape XML/HTML entities like &amp;
-    trimmed = trimmed.replace(/&amp;/g, '&')
+    trimmed = trimmed.replace(/&amp;/g, '&').replace(/\\&/g, '&')
 
     // 1. Google Drive share links
     const driveMatch = trimmed.match(/drive\.google\.com\/(?:file\/d\/|(?:open|uc|thumbnail)\?(?:[^\s]*&)?id=|file\/u\/\d+\/d\/)([a-zA-Z0-9_-]{15,})/i) ||
@@ -99,6 +99,26 @@ export function transformImageUrl(rawUrl, isExplicit = false) {
             fallbackUrl: `https://images.weserv.nl/?url=${encodeURIComponent(direct)}`,
             defaultTitle: getTitleFromUrl(trimmed),
             source: 'Dropbox'
+        }
+    }
+
+    // Bing's image result host can reject direct embeds; try the image proxy first.
+    if (/^https?:\/\/tse\d*\.explicit\.bing\.net\//i.test(trimmed)) {
+        return {
+            url: `https://images.weserv.nl/?url=${encodeURIComponent(trimmed)}`,
+            fallbackUrl: trimmed,
+            defaultTitle: getTitleFromUrl(trimmed),
+            source: 'Bing Image'
+        }
+    }
+
+    // This CDN can reject direct embeds; use the image proxy with the source as fallback.
+    if (/^https?:\/\/cdn-men\.aznude\.com\//i.test(trimmed)) {
+        return {
+            url: `https://images.weserv.nl/?url=${encodeURIComponent(trimmed)}`,
+            fallbackUrl: trimmed,
+            defaultTitle: getTitleFromUrl(trimmed),
+            source: 'AZNude Image'
         }
     }
 
@@ -195,7 +215,7 @@ export function transformImageUrl(rawUrl, isExplicit = false) {
     }
 
     // 8. Common image hosts and CDNs where "Copy Image Address" often lacks standard file extensions
-    const isImageHost = /(?:images\.unsplash\.com|unsplash\.com\/photos|pbs\.twimg\.com|twimg\.com|video\.twimg\.com|abs\.twimg\.com|ton\.twimg\.com|i\.redd\.it|preview\.redd\.it|external-preview\.redd\.it|cdn\.discordapp\.com|media\.discordapp\.net|blogger\.googleusercontent\.com|cdninstagram\.com|instagram\.f[a-z0-9-]+\.net|i\.pinimg\.com|pinimg\.com|cloudinary\.com|staticflickr\.com|flickr\.com|media\.giphy\.com|giphy\.com|c\.tenor\.com|tenor\.com|upload\.wikimedia\.org|user-images\.githubusercontent\.com|raw\.githubusercontent\.com|avatars\.githubusercontent\.com|i[0-9]\.wp\.com|gravatar\.com|cdn\.shopify\.com|imagedelivery\.net|cloudfront\.net|fbcdn\.net|scontent\.f[a-z0-9-]+\.fna\.fbcdn\.net|scontent[0-9-]*\.xx\.fbcdn\.net|lookaside\.fbsbx\.com|platform-lookaside\.fbsbx\.com|freepik\.com|pexels\.com|pixabay\.com|alamy\.com|gettyimages\.com|istockphoto\.com|wixstatic\.com|squarespace-cdn\.com|myreadingmanga\.info|manga\.life|mangadex\.org|webtoons\.com|tapas\.io|nhentai\.net|mangakakalot\.com|manganelo\.com|readmangas?\.com|chapmanganato\.to|i\.imgur\.com|prnt\.sc|prntscr\.com|postimg\.cc|imgbb\.com|ibb\.co)/i.test(trimmed)
+    const isImageHost = /(?:tse\d*\.explicit\.bing\.net|encrypted-tbn\d*\.gstatic\.com|tbn\d*\.gstatic\.com|images\.unsplash\.com|unsplash\.com\/photos|pbs\.twimg\.com|twimg\.com|video\.twimg\.com|abs\.twimg\.com|ton\.twimg\.com|i\.redd\.it|preview\.redd\.it|external-preview\.redd\.it|cdn\.discordapp\.com|media\.discordapp\.net|blogger\.googleusercontent\.com|cdninstagram\.com|instagram\.f[a-z0-9-]+\.net|i\.pinimg\.com|pinimg\.com|cloudinary\.com|staticflickr\.com|flickr\.com|media\.giphy\.com|giphy\.com|c\.tenor\.com|tenor\.com|upload\.wikimedia\.org|user-images\.githubusercontent\.com|raw\.githubusercontent\.com|avatars\.githubusercontent\.com|i[0-9]\.wp\.com|gravatar\.com|cdn\.shopify\.com|imagedelivery\.net|cloudfront\.net|fbcdn\.net|scontent\.f[a-z0-9-]+\.fna\.fbcdn\.net|scontent[0-9-]*\.xx\.fbcdn\.net|lookaside\.fbsbx\.com|platform-lookaside\.fbsbx\.com|freepik\.com|pexels\.com|pixabay\.com|alamy\.com|gettyimages\.com|istockphoto\.com|wixstatic\.com|squarespace-cdn\.com|myreadingmanga\.info|manga\.life|mangadex\.org|webtoons\.com|tapas\.io|nhentai\.net|mangakakalot\.com|manganelo\.com|readmangas?\.com|chapmanganato\.to|i\.imgur\.com|prnt\.sc|prntscr\.com|postimg\.cc|imgbb\.com|ibb\.co)/i.test(trimmed)
     if (isImageHost) {
         return {
             url: trimmed,

@@ -109,6 +109,9 @@ export default class BookmarkItemCover extends React.PureComponent {
                         finalCover.includes('drive.google.com/thumbnail') ||
                         finalCover.includes('drive.usercontent.google.com') ||
                         finalCover.includes('googleusercontent.com') ||
+                        /gstatic\.com/i.test(finalCover) ||
+                        /tse\d*\.explicit\.bing\.net/i.test(finalCover) ||
+                        /cdn-men\.aznude\.com/i.test(finalCover) ||
                         /pbs\.twimg\.com|twimg\.com/i.test(finalCover) ||
                         /fbcdn\.net|scontent\./i.test(finalCover) ||
                         /imgur\.com/i.test(finalCover) ||
@@ -148,6 +151,9 @@ export default class BookmarkItemCover extends React.PureComponent {
             uri.includes('drive.google.com/thumbnail') ||
             uri.includes('drive.usercontent.google.com') ||
             uri.includes('googleusercontent.com') ||
+            /gstatic\.com/i.test(uri) ||
+            /tse\d*\.explicit\.bing\.net/i.test(uri) ||
+            /cdn-men\.aznude\.com/i.test(uri) ||
             /pbs\.twimg\.com|twimg\.com/i.test(uri) ||
             /fbcdn\.net|scontent\./i.test(uri) ||
             /imgur\.com/i.test(uri) ||
