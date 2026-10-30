@@ -62,7 +62,7 @@ export default class BookmarkItemCover extends React.PureComponent {
         if (cover && !img.dataset.triedRaindropFile) {
             const direct = cover.match(/https?:\/\/[^\s<>"']+/i)?.[0] || cover
             const transformed = transformImageUrl(direct, true)
-            if (transformed?.source === 'Raindrop' && transformed.fallbackUrl) {
+            if (transformed?.source === 'Raindrop' && transformed.url) {
                 img.dataset.triedRaindropFile = 'true'
                 img.dataset.triedDirect = 'true'
                 const source = img.parentElement?.querySelector('source')
@@ -73,17 +73,17 @@ export default class BookmarkItemCover extends React.PureComponent {
                 } catch (e) {}
 
                 if (token) {
-                    fetch(transformed.fallbackUrl, {
+                    fetch(transformed.url, {
                         headers: { Authorization: `Bearer ${token}` }
                     })
                     .then(response => response.ok ? response.blob() : null)
                     .then(blob => {
                         if (blob) img.src = URL.createObjectURL(blob)
-                        else img.src = transformed.fallbackUrl
+                        else img.src = transformed.fallbackUrl || transformed.url
                     })
-                    .catch(() => { img.src = transformed.fallbackUrl })
+                    .catch(() => { img.src = transformed.fallbackUrl || transformed.url })
                 } else {
-                    img.src = transformed.fallbackUrl
+                    img.src = transformed.fallbackUrl || transformed.url
                 }
                 return
             }
@@ -140,7 +140,6 @@ export default class BookmarkItemCover extends React.PureComponent {
                         finalCover.includes('drive.google.com/thumbnail') ||
                         finalCover.includes('drive.usercontent.google.com') ||
                         finalCover.includes('googleusercontent.com') ||
-                        /(?:up|api)\.raindrop\.io/i.test(finalCover) ||
                         /gstatic\.com/i.test(finalCover) ||
                         /tse\d*\.explicit\.bing\.net/i.test(finalCover) ||
                         /cdn-men\.aznude\.com/i.test(finalCover) ||
@@ -183,7 +182,6 @@ export default class BookmarkItemCover extends React.PureComponent {
             uri.includes('drive.google.com/thumbnail') ||
             uri.includes('drive.usercontent.google.com') ||
             uri.includes('googleusercontent.com') ||
-            /(?:up|api)\.raindrop\.io/i.test(uri) ||
             /gstatic\.com/i.test(uri) ||
             /tse\d*\.explicit\.bing\.net/i.test(uri) ||
             /cdn-men\.aznude\.com/i.test(uri) ||

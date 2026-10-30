@@ -137,8 +137,8 @@ export function transformImageUrl(rawUrl, isExplicit = false) {
     if (raindropFileMatch) {
         const fileId = raindropFileMatch[1] || raindropFileMatch[2] || raindropFileMatch[3] || raindropFileMatch[4]
         return {
-            url: `https://up.raindrop.io/${fileId}`,
-            fallbackUrl: `https://api.raindrop.io/rest/v1/raindrop/file/${fileId}`,
+            url: `https://api.raindrop.io/rest/v1/raindrop/file/${fileId}`,
+            fallbackUrl: `https://up.raindrop.io/${fileId}`,
             defaultTitle: `Attached Photo ${fileId}`,
             source: 'Raindrop'
         }

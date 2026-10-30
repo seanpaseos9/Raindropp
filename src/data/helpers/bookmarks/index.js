@@ -129,6 +129,7 @@ export const normalizeBookmark = (item={}, options)=>{
 		duplicateKind:	item.duplicateKind || null,
 		duplicateMatchId:	item.duplicateMatchId ? parseInt(item.duplicateMatchId, 10) : null,
 		duplicateGroupSize:	item.duplicateGroupSize ? parseInt(item.duplicateGroupSize, 10) : 0,
+		duplicateGroupKey:	item.duplicateGroupKey || '',
 		tags: 			(item.tags||[]).join(', '),
 		reparse:		item.reparse || (item.pleaseParse ? true : false),
 		cache:			item.cache ? item.cache.status : '',

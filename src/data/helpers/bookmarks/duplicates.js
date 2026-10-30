@@ -63,7 +63,7 @@ export function findDuplicateEntries(bookmarks = []) {
     bookmarks.forEach((bookmark, index) => {
         if (!bookmark) return
         const id = bookmark._id ?? `index:${index}`
-        byId.set(id, { bookmark, id, kind: '', matchId: null, size: 0 })
+        byId.set(id, { bookmark, id, kind: '', matchId: null, size: 0, groupKey: '' })
 
         const linkKey = normalizeBookmarkLink(bookmark.link)
         if (linkKey) {
@@ -78,7 +78,7 @@ export function findDuplicateEntries(bookmarks = []) {
         }
     })
 
-    const markGroup = (ids, kind) => {
+    const markGroup = (ids, kind, groupKey) => {
         ids.forEach(id => {
             const entry = byId.get(id)
             if (!entry) return
@@ -86,17 +86,19 @@ export function findDuplicateEntries(bookmarks = []) {
                 entry.kind = kind
                 entry.matchId = ids.find(otherId => otherId !== id) ?? null
                 entry.size = ids.length
+                entry.groupKey = groupKey
             }
         })
     }
 
-    linkGroups.forEach(ids => {
-        if (ids.length > 1) markGroup(ids, 'link')
+    linkGroups.forEach((ids, key) => {
+        if (ids.length > 1) markGroup(ids, 'link', `link:${key}`)
     })
 
     // Exact normalized titles are useful even when links differ.
-    titleGroups.forEach(ids => {
-        if (ids.length > 1) markGroup(ids, 'title')
+    titleGroups.forEach((ids, key) => {
+        const titleOnlyIds = ids.filter(id => !byId.get(id)?.kind)
+        if (titleOnlyIds.length > 1) markGroup(titleOnlyIds, 'title', `title:${key}`)
     })
 
     // Find close title variants through shared, non-rare words. This avoids an
@@ -120,6 +122,7 @@ export function findDuplicateEntries(bookmarks = []) {
     })
 
     const similarPairs = new Set()
+    const similarAdjacency = new Map()
     tokenIndex.forEach(entries => {
         for (let i = 0; i < entries.length; i++) {
             for (let j = i + 1; j < entries.length; j++) {
@@ -129,30 +132,61 @@ export function findDuplicateEntries(bookmarks = []) {
                 if (similarPairs.has(pairKey)) continue
                 similarPairs.add(pairKey)
 
+                if (left.kind || right.kind) continue
+
                 const leftLink = normalizeBookmarkLink(left.bookmark.link)
                 const rightLink = normalizeBookmarkLink(right.bookmark.link)
                 if (leftLink && leftLink === rightLink) continue
                 if (titleSimilarity(left.bookmark.title, right.bookmark.title) < 0.8) continue
 
-                for (const [entry, other] of [[left, right], [right, left]]) {
-                    const annotated = byId.get(entry.id)
-                    if (annotated && !annotated.kind) {
-                        annotated.kind = 'title'
-                        annotated.matchId = other.id
-                        annotated.size = 2
-                    }
-                }
+                if (!similarAdjacency.has(left.id)) similarAdjacency.set(left.id, new Set())
+                if (!similarAdjacency.has(right.id)) similarAdjacency.set(right.id, new Set())
+                similarAdjacency.get(left.id).add(right.id)
+                similarAdjacency.get(right.id).add(left.id)
             }
         }
     })
 
+    const visited = new Set()
+    for (const id of similarAdjacency.keys()) {
+        if (visited.has(id)) continue
+        const group = []
+        const pending = [id]
+        visited.add(id)
+        while (pending.length) {
+            const currentId = pending.pop()
+            group.push(currentId)
+            similarAdjacency.get(currentId)?.forEach(otherId => {
+                if (visited.has(otherId)) return
+                visited.add(otherId)
+                pending.push(otherId)
+            })
+        }
+
+        if (group.length < 2) continue
+        const groupKey = `title-pair:${group.map(String).sort().join('|')}`
+        group.forEach(groupId => {
+            const entry = byId.get(groupId)
+            entry.kind = 'title'
+            entry.matchId = group.find(otherId => otherId !== groupId)
+            entry.size = group.length
+            entry.groupKey = groupKey
+        })
+    }
+
     return [...byId.values()]
         .filter(entry => entry.kind)
-        .map(({ bookmark, kind, matchId, size }) => ({
+        .sort((left, right) => {
+            const kindOrder = (left.kind === 'link' ? 0 : 1) - (right.kind === 'link' ? 0 : 1)
+            if (kindOrder) return kindOrder
+            return left.groupKey.localeCompare(right.groupKey)
+        })
+        .map(({ bookmark, kind, matchId, size, groupKey }) => ({
             ...bookmark,
             duplicateKind: kind,
             duplicateMatchId: typeof matchId === 'number' ? matchId : null,
-            duplicateGroupSize: size
+            duplicateGroupSize: size,
+            duplicateGroupKey: groupKey
         }))
 }
 

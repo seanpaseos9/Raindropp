@@ -1,0 +1,38 @@
+.groups {
+    display: flex
+    flex-direction: column
+    gap: var(--padding-large)
+}
+
+.section {
+    min-width: 0
+}
+
+.heading {
+    margin: 0 0 var(--padding-medium)
+    color: var(--secondary-text-color)
+    font-size: var(--secondary-font-size)
+    font-weight: 600
+}
+
+.pair {
+    display: grid
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)
+    gap: var(--padding-medium)
+    margin-bottom: var(--padding-large)
+    align-items: stretch
+}
+
+.pair > * {
+    min-width: 0
+}
+
+.linkReason, .titleReason {
+    grid-column: 1 / -1
+    font-size: var(--secondary-font-size)
+    color: var(--secondary-text-color)
+}
+
+.titleReason {
+    color: #b58a42
+}

@@ -84,7 +84,7 @@ export default function(state, action) {switch (action.type) {
 		const oldSpace = state.spaces[spaceId]
 
 		//ignore when nothing changed (including data, query)
-		if (oldSpace && 
+		if (parseInt(spaceId) !== -9 && oldSpace &&
 			oldSpace.lastAction == lastAction && 
 			oldSpace.version == version){
 			action.ignore = true
