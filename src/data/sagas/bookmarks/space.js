@@ -1,7 +1,7 @@
 import _ from 'lodash'
 import { all, call, fork, put, takeEvery, select } from 'redux-saga/effects'
 import Api from '../../modules/api'
-import { getUrl, findDuplicateBookmarks, normalizeBookmark, parseNoteMetadata, injectNoteMetadata } from '../../helpers/bookmarks'
+import { getUrl, findDuplicateEntries, normalizeBookmark, parseNoteMetadata, injectNoteMetadata } from '../../helpers/bookmarks'
 import { COLLECTION_UPDATE_COUNT } from '../../constants/collections'
 import { SPACE_PER_PAGE } from '../../constants/bookmarks'
 
@@ -139,41 +139,38 @@ function* loadSpace({spaceId, query, ignore=false}) {
 		let count = 0
 
 		if (parseInt(spaceId) === -9) {
-			// Duplicate detection across ALL bookmarks
-			let duplicateItems = []
+			// Scan every page from All bookmarks before computing duplicate groups.
+			let allBookmarks = []
+			const firstPage = yield call(Api.get, `raindrops/${getUrl(0, { page: 0 })}`)
+			allBookmarks = firstPage.items || []
+			const reportedCount = Number(firstPage.count)
+			const totalPages = reportedCount > 0
+				? Math.ceil(reportedCount / SPACE_PER_PAGE)
+				: (allBookmarks.length < SPACE_PER_PAGE ? 1 : Infinity)
+			const pagesPerBatch = 5
 
-			try {
-				// 1. Fetch from collection 0 (All bookmarks)
-				const allRes = yield call(Api.get, 'raindrops/0?perpage=50')
-				const fetched = allRes.items || []
+			for (let startPage = 1; startPage < totalPages; startPage += pagesPerBatch) {
+				const endPage = Math.min(startPage + pagesPerBatch, totalPages)
+				const pageResults = yield all(Array.from(
+					{ length: endPage - startPage },
+					(_, index) => call(Api.get, `raindrops/${getUrl(0, { page: startPage + index })}`)
+				))
+				pageResults.forEach(pageResult => {
+					allBookmarks = allBookmarks.concat(pageResult.items || [])
+				})
+				if (totalPages === Infinity && pageResults.some(pageResult => (pageResult.items || []).length < SPACE_PER_PAGE)) break
+			}
 
-				// 2. Combine with any bookmarks already loaded in Redux state
-				const state = yield select()
-				const existing = Object.values(state.bookmarks?.elements || {})
-
-				const map = new Map()
-				for (const b of fetched) {
-					if (b && b._id) map.set(b._id, b)
-				}
-				for (const b of existing) {
-					if (b && b._id && !map.has(b._id)) map.set(b._id, b)
-				}
-
-				// 3. Detect duplicate links across all bookmarks
-				duplicateItems = findDuplicateBookmarks(Array.from(map.values()))
-			} catch (e) {}
+			const seenIds = new Set()
+			allBookmarks = allBookmarks.filter(bookmark => {
+				if (!bookmark?._id) return true
+				if (seenIds.has(bookmark._id)) return false
+				seenIds.add(bookmark._id)
+				return true
+			})
+			let duplicateItems = findDuplicateEntries(allBookmarks)
 
 			const { filters, text } = parseSearchFilters(query?.search || '')
-
-			// Fallback to server search query if local detection found none
-			if (!duplicateItems.length) {
-				try {
-					const sRes = yield call(Api.get, `raindrops/${getUrl(spaceId, { ...query, search: text })}`)
-					if (sRes.items && sRes.items.length) {
-						duplicateItems = sRes.items
-					}
-				} catch (e) {}
-			}
 
 			if (text) {
 				const sLower = text.toLowerCase()

@@ -122,13 +122,23 @@ export function transformImageUrl(rawUrl, isExplicit = false) {
         }
     }
 
+    // Facebook CDN URLs are signed and may reject direct embedding; try proxy first.
+    if (/^https?:\/\/(?:scontent[^/]*\.fbcdn\.net|lookaside\.fbsbx\.com)\//i.test(trimmed)) {
+        return {
+            url: `https://images.weserv.nl/?url=${encodeURIComponent(trimmed)}`,
+            fallbackUrl: trimmed,
+            defaultTitle: getTitleFromUrl(trimmed),
+            source: 'Facebook Image'
+        }
+    }
+
     // 5. Raindrop API file / upload or numeric ID
-    const raindropFileMatch = trimmed.match(/(?:raindrop(?:\.io)?(?:\/rest\/v1)?\/file\/([0-9a-zA-Z_-]+)|up\.raindrop\.io\/([0-9a-zA-Z_-]+)|^\/?(?:rest\/)?v1\/raindrop\/file\/([0-9a-zA-Z_-]+)|^([0-9]{6,12})$)/i)
+    const raindropFileMatch = trimmed.match(/(?:raindrop(?:\.io)?(?:\/rest\/v1)?(?:\/raindrop)?\/file\/([0-9a-zA-Z_-]+)|up\.raindrop\.io\/([0-9a-zA-Z_-]+)|^\/?(?:rest\/)?v1\/raindrop\/file\/([0-9a-zA-Z_-]+)|^([0-9]{6,12})$)/i)
     if (raindropFileMatch) {
         const fileId = raindropFileMatch[1] || raindropFileMatch[2] || raindropFileMatch[3] || raindropFileMatch[4]
         return {
-            url: `https://api.raindrop.io/rest/v1/raindrop/file/${fileId}`,
-            fallbackUrl: `https://up.raindrop.io/${fileId}`,
+            url: `https://up.raindrop.io/${fileId}`,
+            fallbackUrl: `https://api.raindrop.io/rest/v1/raindrop/file/${fileId}`,
             defaultTitle: `Attached Photo ${fileId}`,
             source: 'Raindrop'
         }

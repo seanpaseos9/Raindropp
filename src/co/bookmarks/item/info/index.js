@@ -11,6 +11,7 @@ import { getRatingColor } from '~co/bookmarks/edit/form/ratingColors'
 
 export default function BookmarkItemInfo(props) {
     const { className='', creatorRef, domain, type, link, created, reparse, collectionId, spaceId, important, broken, duplicate, cache, highlight, fileType } = props
+    const { duplicateKind, duplicateMatchId, duplicateGroupSize } = props
 
     return (
         <div className={s.info+' '+className}>
@@ -45,7 +46,7 @@ export default function BookmarkItemInfo(props) {
                 <section><Icon name='broken' size='micro' /></section>
             ) : null}
 
-            {duplicate ? (
+            {duplicate && !duplicateKind ? (
                 <>
                     <section data-inline className={s.duplicateLabel}><Icon name='duplicate' size='micro' /></section>
                     <section className={s.duplicateLabel}>
@@ -54,6 +55,28 @@ export default function BookmarkItemInfo(props) {
                             title={t.s('searchOriginal')}>
                             {t.s('duplicates')}
                         </Link>
+                    </section>
+                </>
+            ) : null}
+
+            {duplicateKind ? (
+                <>
+                    <section data-inline className={duplicateKind === 'link' ? s.duplicateLabel : s.possibleDuplicateLabel}>
+                        <Icon name='duplicate' size='micro' />
+                    </section>
+                    <section className={duplicateKind === 'link' ? s.duplicateLabel : s.possibleDuplicateLabel}>
+                        {duplicateMatchId ? (
+                            <Link
+                                to={'/my/0/'+encodeURIComponent(`_id:${duplicateMatchId}`)}
+                                title={duplicateKind === 'link' ? 'Same destination link' : 'Similar title; check whether these are the same item'}>
+                                {duplicateKind === 'link' ? 'Duplicate link' : 'Similar title'}
+                                {duplicateGroupSize > 2 ? ` (${duplicateGroupSize})` : ''}
+                            </Link>
+                        ) : (
+                            <span title={duplicateKind === 'link' ? 'Same destination link' : 'Similar title; check whether these are the same item'}>
+                                {duplicateKind === 'link' ? 'Duplicate link' : 'Similar title'}
+                            </span>
+                        )}
                     </section>
                 </>
             ) : null}
