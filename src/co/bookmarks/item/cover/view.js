@@ -169,6 +169,7 @@ export default class BookmarkItemCover extends React.PureComponent {
         let mode
         switch(view) {
             case 'grid':
+            case 'masonry':
                 mode = 'fillmax'
                 break
 
@@ -218,7 +219,6 @@ export default class BookmarkItemCover extends React.PureComponent {
                     referrerPolicy='no-referrer'
                     {...etc}
                     src={srcUrl}
-                    loading='lazy'
                     decoding='async'
                     //type='image/jpeg'
                     onLoadStart={indicator ? this.onImageLoadStart : undefined}
