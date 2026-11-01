@@ -132,7 +132,11 @@ export default class BookmarkItemCover extends React.PureComponent {
                     const match = cover.match(/https?:\/\/[^\s<>"]+/i)
                     if (match) cleanCover = match[0]
                     const transformed = transformImageUrl(cleanCover, true)
-                    const finalCover = transformed ? transformed.url : cleanCover
+                    // Use the public legacy upload URL as the thumbnail source. The private
+                    // API file endpoint cannot be rendered by the unauthenticated image proxy.
+                    const finalCover = transformed?.source === 'Raindrop'
+                        ? (transformed.fallbackUrl || transformed.url)
+                        : (transformed ? transformed.url : cleanCover)
                     // For data: URLs or CDN/social URLs, skip the rdl.ink proxy to avoid double-proxying
                     const isCdnUrl = (
                         finalCover.startsWith('data:') ||
@@ -201,7 +205,7 @@ export default class BookmarkItemCover extends React.PureComponent {
         return (
             <>
                 <source
-                    srcSet={srcSetUrl}
+                    srcSet={isDirectUri ? undefined : srcSetUrl}
                     type='image/webp' />
 
                 <img 
@@ -214,6 +218,8 @@ export default class BookmarkItemCover extends React.PureComponent {
                     referrerPolicy='no-referrer'
                     {...etc}
                     src={srcUrl}
+                    loading='lazy'
+                    decoding='async'
                     //type='image/jpeg'
                     onLoadStart={indicator ? this.onImageLoadStart : undefined}
                     onLoad={indicator ? this.onImageLoadSuccess : undefined}

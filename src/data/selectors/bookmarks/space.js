@@ -53,6 +53,7 @@ export const getCoverSize = (state, view)=>{
 	switch(view) {
 		case 'grid':
 		case 'masonry':
+		case 'gallery':
 			return state.config.raindrops_grid_cover_size
 
 		default:

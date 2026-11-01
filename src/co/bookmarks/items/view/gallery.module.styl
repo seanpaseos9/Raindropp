@@ -1,0 +1,30 @@
+.gallery {
+    --lazy-item-height: 440px
+
+    main {
+        display: grid
+        grid-template-columns: unquote('repeat(auto-fill, minmax(min(100%, var(--gallery-card-width)), 1fr))')
+        grid-auto-rows: minmax(0, auto)
+        gap: var(--padding-medium)
+        padding: var(--padding-medium)
+        padding-bottom: 0
+    }
+
+    main > div:empty {
+        min-height: var(--lazy-item-height)
+        border-radius: var(--border-radius)
+        background: linear-gradient(110deg, var(--sidebar-background-color) 8%, var(--background-color) 18%, var(--sidebar-background-color) 33%)
+        background-size: 200% 100%
+        animation: gallery-shimmer 1.4s linear infinite
+    }
+}
+
+@keyframes gallery-shimmer {
+    to { background-position-x: -200% }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gallery main > div:empty {
+        animation: none
+    }
+}

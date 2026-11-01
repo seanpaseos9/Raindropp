@@ -40,6 +40,7 @@ export const changeCoverSize = (spaceId, view, value)=>{
 	switch(view) {
 		case 'grid':
 		case 'masonry':
+		case 'gallery':
 			return {
 				type: SPACE_VIEW_CONFIG,
 				spaceId: String(spaceId),

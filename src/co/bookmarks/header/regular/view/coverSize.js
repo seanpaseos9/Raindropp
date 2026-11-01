@@ -21,6 +21,7 @@ class BookmarksHeaderViewCoverSize extends React.Component {
         switch(view) {
             case 'grid':
             case 'masonry':
+            case 'gallery':
                 if (viewHide.includes('cover')) return null
             break
 

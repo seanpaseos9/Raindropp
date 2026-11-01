@@ -6,6 +6,7 @@ import List from './list'
 import Simple from './simple'
 import Grid from './grid'
 import Masonry from './masonry'
+import Gallery from './gallery'
 
 export default function BookmarksItemsView({ spaceId, view, children }) {
     const getViewHide = useRef(makeViewHide()).current
@@ -18,6 +19,7 @@ export default function BookmarksItemsView({ spaceId, view, children }) {
         case 'simple': Component = Simple; break;
         case 'grid': Component = Grid; break;
         case 'masonry': Component = Masonry; break;
+        case 'gallery': Component = Gallery; break;
         default: Component = List; break;
     }
 

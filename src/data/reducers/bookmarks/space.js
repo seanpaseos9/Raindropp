@@ -72,6 +72,7 @@ export default function(state, action) {switch (action.type) {
 				.set('lastAction', '')
 				.set('version', '')
 				.set('count', 0)
+				.setIn(['status', 'main'], 'loading')
 
 			return state.setIn(['spaces', spaceId], space)
 		}
@@ -91,11 +92,16 @@ export default function(state, action) {switch (action.type) {
 			return state
 		}
 
+		//Keep already displayed results visible while checking for remote changes.
+		const hasCachedResults = oldSpace &&
+			queryIsEqual(oldSpace.query, query) &&
+			(oldSpace.status.main == 'loaded' || oldSpace.status.main == 'empty')
+
 		//reset space to initial state
 		let space = (oldSpace || blankSpace)
 			.set('lastAction', lastAction)
 			.set('version', version)
-			.setIn(['status', 'main'], 'loading')
+			.setIn(['status', 'main'], hasCachedResults ? oldSpace.status.main : 'loading')
 			.setIn(['status', 'nextPage'], blankSpace.status.nextPage)
 
 		//set correct query
@@ -149,6 +155,10 @@ export default function(state, action) {switch (action.type) {
 
 		//results from other request, ignore
 		if (!queryIsEqual(space.query, query))
+			return state
+
+		//A failed background refresh should not blank a folder that already has results.
+		if (space.status.main == 'loaded' || space.status.main == 'empty')
 			return state
 
 		space = space

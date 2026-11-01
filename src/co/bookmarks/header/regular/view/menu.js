@@ -16,6 +16,7 @@ export default function BookmarksHeaderViewMenu({ spaceId, collection: { view },
         'grid':     t.s('view_grid'),
         'simple':   t.s('view_simple'),
         'masonry':  t.s('view_masonry'),
+        'gallery':  t.s('view_gallery'),
     }), [])
 
     const onViewClick = useCallback((e)=>
