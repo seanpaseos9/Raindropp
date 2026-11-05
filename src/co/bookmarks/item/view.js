@@ -100,7 +100,7 @@ export default function BookmarkItemView(props) {
                             <span>{read ? 'Read' : 'Unread'}</span>
                         </label>
 
-                        <div 
+                        {Boolean(lastChapter) && <div
                             className={s.chapterBadge}
                             onClick={e => e.stopPropagation()}
                             title='Last Chapter reading progress'>
@@ -112,16 +112,14 @@ export default function BookmarkItemView(props) {
                                 value={lastChapter}
                                 onChange={e => onUpdateChapter && onUpdateChapter(e.target.value)}
                             />
-                            {Boolean(lastChapter) && (
-                                <button
-                                    type='button'
-                                    className={s.chapterRestartBtn}
-                                    onClick={onRestartChapter}
-                                    title='Restart reading progress (🔄)'>
-                                    🔄
-                                </button>
-                            )}
-                        </div>
+                            <button
+                                type='button'
+                                className={s.chapterRestartBtn}
+                                onClick={onRestartChapter}
+                                title='Restart reading progress (🔄)'>
+                                🔄
+                            </button>
+                        </div>}
                     </div>
 
                     {/* Info */}

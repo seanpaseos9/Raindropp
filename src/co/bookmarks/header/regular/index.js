@@ -10,6 +10,8 @@ import Title from './title'
 import Open from './open'
 import More from './more'
 import Sort from './sort'
+import ReadFilter from './readFilter'
+import RatingFilter from './ratingFilter'
 import View from './view'
 import Export from '../../export/button'
 
@@ -39,6 +41,8 @@ class BookmarksHeader extends React.Component {
 
                 <Space />
                 
+                <ReadFilter {...this.props} />
+                <RatingFilter {...this.props} />
                 <Sort {...this.props} />
                 <View {...this.props} />
                 {status.main == 'loaded' ? (<>

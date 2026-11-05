@@ -3,6 +3,7 @@ import s from './index.module.styl'
 import Lightbox from './lightbox'
 import StarRating from './rating'
 import { formatMultipleImageEntries, handleImageLoadError, truncateTitle } from './helper'
+import getThumbUri from '~data/modules/format/thumb'
 
 export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCaption, onUpdateRating, onDeleteImage }) {
     const [activeIndex, setActiveIndex] = useState(0)
@@ -14,6 +15,7 @@ export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCap
     const [editingCaptionIdx, setEditingCaptionIdx] = useState(null)
     const [editCaptionValue, setEditCaptionValue] = useState('')
     const [addFeedback, setAddFeedback] = useState('')
+    const [failedImages, setFailedImages] = useState({})
 
     const fileInputRef = useRef(null)
     const trackRef = useRef(null)
@@ -30,6 +32,18 @@ export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCap
     })
 
     const count = images.length
+    const carouselImages = images.map(item => {
+        const originalUrl = item.originalUrl || item.url
+        if (!/myreadingmanga\.info/i.test(originalUrl || '')) return item
+
+        // Bookmark covers use Raindrop's renderer, which can fetch this host from
+        // the server even when the browser receives a Cloudflare challenge page.
+        return {
+            ...item,
+            url: `${getThumbUri(originalUrl)}?width=2400&format=webp`,
+            fallbackUrl: originalUrl
+        }
+    })
 
     // Scroll to specific index programmatically without feedback loop
     const scrollToIndex = useCallback((targetIndex) => {
@@ -366,8 +380,9 @@ export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCap
                     ref={trackRef}
                     className={s.track}
                     onScroll={handleScroll}>
-                    {images.map((item, idx) => {
+                    {carouselImages.map((item, idx) => {
                         const isEditingThisCaption = editingCaptionIdx === idx
+                        const imageKey = item.originalUrl || item.url
                         return (
                             <div
                                 key={item.url + idx}
@@ -381,10 +396,17 @@ export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCap
                                     src={item.url}
                                     alt={item.caption || item.title || `Photo ${idx + 1}`}
                                     className={s.image}
-                                    loading='lazy'
                                     referrerPolicy='no-referrer'
-                                    onError={(e) => handleImageLoadError(e, item)}
+                                    onLoad={() => setFailedImages(current => current[imageKey] ? { ...current, [imageKey]: false } : current)}
+                                    onError={(e) => handleImageLoadError(e, item, () => setFailedImages(current => ({ ...current, [imageKey]: true })))}
                                 />
+                                {failedImages[imageKey] && <div className={s.imageError}>
+                                    <span>Image host blocked the gallery request.</span>
+                                    <a href={item.originalUrl || item.url} target='_blank' rel='noreferrer' onClick={e => e.stopPropagation()}>
+                                        Open original image
+                                    </a>
+                                    <span>Or download it and use Upload Photo(s).</span>
+                                </div>}
 
                                 {/* Slide Trash Delete Button (🗑️) */}
                                 {onDeleteImage && (
@@ -546,7 +568,7 @@ export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCap
             {/* Fullscreen Lightbox Modal */}
             {lightboxIndex !== null && (
                 <Lightbox
-                    images={images}
+                    images={carouselImages}
                     initialIndex={lightboxIndex}
                     onClose={() => setLightboxIndex(null)}
                     onUpdateRating={onUpdateRating}

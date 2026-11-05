@@ -24,28 +24,6 @@ const getMatchOr = createSelector(
 	}
 )
 
-const READ_OPTIONS = [
-    {
-        _id: 'is_read',
-        query: 'is:read ',
-        top: true
-    },
-    {
-        _id: 'is_unread',
-        query: 'is:unread ',
-        top: true
-    }
-]
-
-const RATING_OPTIONS = [
-	{ _id: 'rating_unrated', query: 'rating:unrated ', top: true },
-	...Array.from({ length: 5 }, (_, index) => ({
-		_id: `rating_${index + 1}`,
-		query: `rating:${index + 1} `,
-		top: true
-	}))
-]
-
 //(state, spaceId, filter, fullquery*) -> []
 export const makeOptions = ()=>createSelector(
     [
@@ -54,11 +32,10 @@ export const makeOptions = ()=>createSelector(
     ],
     (filter, matchOr)=>{
         if (filter) {
-            const fLower = filter.toLowerCase()
-            return [...READ_OPTIONS, ...RATING_OPTIONS].filter(opt => opt.query.trim().startsWith(fLower))
+            return emptyArray
         }
         
-        const options = [...READ_OPTIONS, ...RATING_OPTIONS, ...matchOr]
+        const options = [...matchOr]
         if (!options.length) return emptyArray
 
         return options

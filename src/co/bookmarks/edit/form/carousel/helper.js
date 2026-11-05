@@ -157,6 +157,7 @@ export function transformImageUrl(rawUrl, isExplicit = false) {
         return {
             url: trimmed,
             fallbackUrl: `https://images.weserv.nl/?url=${encodeURIComponent(trimmed)}`,
+            originalUrl: trimmed,
             defaultTitle: cleanName || 'Photo',
             source: 'Image'
         }
@@ -230,6 +231,7 @@ export function transformImageUrl(rawUrl, isExplicit = false) {
         return {
             url: trimmed,
             fallbackUrl: `https://images.weserv.nl/?url=${encodeURIComponent(trimmed)}`,
+            originalUrl: trimmed,
             defaultTitle: getTitleFromUrl(trimmed),
             source: 'Web Photo'
         }
@@ -601,7 +603,7 @@ export function removeImageFromNote(note = '', image = {}) {
  * Universal fallback handler for broken image loads.
  * Attempts fallbackUrl, authenticated fetch for Raindrop API tokens, and weserv image proxy.
  */
-export function handleImageLoadError(e, item = {}) {
+export function handleImageLoadError(e, item = {}, onFailed) {
     const img = e.target
     if (!img) return
     const currentSrc = img.src || ''
@@ -640,9 +642,11 @@ export function handleImageLoadError(e, item = {}) {
         if (!img.dataset.triedProxy && original && original.startsWith('http') && !original.includes('images.weserv.nl')) {
             img.dataset.triedProxy = 'true'
             img.src = `https://images.weserv.nl/?url=${encodeURIComponent(original)}`
+            return true
         }
+        if (onFailed) onFailed()
+        return false
     }
 
     tryProxy()
 }
-
