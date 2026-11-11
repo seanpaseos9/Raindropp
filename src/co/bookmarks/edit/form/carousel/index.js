@@ -34,10 +34,13 @@ export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCap
     const count = images.length
     const carouselImages = images.map(item => {
         const originalUrl = item.originalUrl || item.url
-        if (!/myreadingmanga\.info/i.test(originalUrl || '')) return item
+        const isDirectExternalImage = item.url === originalUrl &&
+            /^https?:\/\//i.test(originalUrl || '') &&
+            !/(?:images\.weserv\.nl|rdl\.ink|drive\.google\.com|googleusercontent\.com|raindrop\.io|up\.raindrop\.io)/i.test(originalUrl)
+        if (!isDirectExternalImage) return item
 
-        // Bookmark covers use Raindrop's renderer, which can fetch this host from
-        // the server even when the browser receives a Cloudflare challenge page.
+        // Match the bookmark cover path: render external image URLs through
+        // Raindrop's image service, then retain the source as a fallback.
         return {
             ...item,
             url: `${getThumbUri(originalUrl)}?width=2400&format=webp`,

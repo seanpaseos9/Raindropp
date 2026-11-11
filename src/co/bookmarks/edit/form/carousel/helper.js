@@ -1,3 +1,11 @@
+export function normalizeImageUrl(rawUrl = '') {
+    if (typeof rawUrl !== 'string') return ''
+    return rawUrl.trim()
+        .replace(/^(https?)\\:\/\//i, '$1://')
+        .replace(/\\_/g, '_')
+        .replace(/\\+$/, '')
+}
+
 /**
  * Helper to scan bookmark note string and extract valid image URLs,
  * including direct image files (.jpg, .jpeg, .png, .gif, .webp, .svg, .avif)
@@ -44,11 +52,8 @@ export function truncateTitle(title = '', maxLen = 38) {
 export function transformImageUrl(rawUrl, isExplicit = false) {
     if (!rawUrl || typeof rawUrl !== 'string') return null
 
-    let trimmed = rawUrl.trim()
+    let trimmed = normalizeImageUrl(rawUrl)
     if (!trimmed) return null
-
-    // Accept URLs copied from escaped Markdown/text (https\://...) and line continuations.
-    trimmed = trimmed.replace(/^(https?)\\:\/\//i, '$1://').replace(/\\+$/, '')
 
     // Unescape XML/HTML entities like &amp;
     trimmed = trimmed.replace(/&amp;/g, '&').replace(/\\&/g, '&')
@@ -333,7 +338,7 @@ export function extractImageUrls(text = '', item = null) {
             matchedRanges.push(fullMatch)
             const { rating, cleanCaption } = parseRatingAndCleanCaption(alt, optionalTitle)
             images.push({
-                originalUrl: rawUrl,
+                originalUrl: normalizeImageUrl(rawUrl),
                 url: info.url,
                 fallbackUrl: info.fallbackUrl,
                 title: cleanCaption || info.defaultTitle,
@@ -359,7 +364,7 @@ export function extractImageUrls(text = '', item = null) {
             const rawCap = (q1 || q2 || dashCaption || '').trim()
             const { rating, cleanCaption } = parseRatingAndCleanCaption(rawCap)
             images.push({
-                originalUrl: cleanRaw,
+                originalUrl: normalizeImageUrl(cleanRaw),
                 url: info.url,
                 fallbackUrl: info.fallbackUrl,
                 title: cleanCaption || info.defaultTitle,
@@ -382,7 +387,7 @@ export function extractImageUrls(text = '', item = null) {
         if (info) {
             matchedRanges.push(cleanRaw)
             images.push({
-                originalUrl: cleanRaw,
+                originalUrl: normalizeImageUrl(cleanRaw),
                 url: info.url,
                 fallbackUrl: info.fallbackUrl,
                 title: info.defaultTitle,
@@ -402,7 +407,7 @@ export function extractImageUrls(text = '', item = null) {
                 const info = transformImageUrl(mediaLink, true)
                 if (info && !images.some(img => img.originalUrl === mediaLink || img.url === info.url)) {
                     images.push({
-                        originalUrl: mediaLink,
+                        originalUrl: normalizeImageUrl(mediaLink),
                         url: info.url,
                         fallbackUrl: info.fallbackUrl,
                         title: info.defaultTitle || 'Attached Media',
@@ -421,7 +426,7 @@ export function extractImageUrls(text = '', item = null) {
         const info = transformImageUrl(item.link, true)
         if (info && !images.some(img => img.originalUrl === item.link || img.url === info.url)) {
             images.unshift({
-                originalUrl: item.link,
+                originalUrl: normalizeImageUrl(item.link),
                 url: info.url,
                 fallbackUrl: info.fallbackUrl,
                 title: item.title || info.defaultTitle || 'Photo',
@@ -438,7 +443,7 @@ export function extractImageUrls(text = '', item = null) {
         const info = transformImageUrl(item.cover, true)
         if (info) {
             images.push({
-                originalUrl: item.cover,
+                originalUrl: normalizeImageUrl(item.cover),
                 url: info.url,
                 fallbackUrl: info.fallbackUrl,
                 title: item.title || 'Bookmark Cover',

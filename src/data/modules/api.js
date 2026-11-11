@@ -168,7 +168,7 @@ const fetchWrap = (url, options)=>{
 			if (res.status >= 200 && res.status < 300)
 				return res
 			else
-				throw new ApiError({ status: res.status, errorMessage: 'fail_fetch_status' })
+				throw new ApiError({ status: res.status, errorMessage: `fail_fetch_status (HTTP ${res.status})` })
 		})
 }
 

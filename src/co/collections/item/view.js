@@ -9,6 +9,8 @@ import Button from '~co/common/button'
 import Icon from '~co/common/icon'
 import CollectionIcon from './icon'
 import CollectionTitle from './title'
+import CollectionReadStatus from './readStatus'
+import { getEmojiAccentColor, getEmojiBackground } from './emojiBackground'
 
 export default class CollectionsItemView extends React.PureComponent {
     renderStatus = ()=>{
@@ -32,15 +34,17 @@ export default class CollectionsItemView extends React.PureComponent {
         const { _id, title, count, color, cover, level, active, expanded, expandable, to, multiselect } = this.props
         const { innerRef, isDragging, isDropping, dropHandlers={} } = this.props
         const { onClick, onExpandClick, onRenameClick, onContextMenu, onKeyUp } = this.props
+        const emojiBackground = getEmojiBackground(title)
+        const emojiAccent = getEmojiAccentColor(title)
 
         return (
             <Item
                 ref={innerRef}
                 className={`${s.item} ${expandable && (expanded ? s.expanded : s.collapsed)} ${isDragging && s.isDragging} ${isDropping && s.isDropping}`}
                 focusable={!multiselect}
-                style={{'--level': level}}
+                style={{'--level': level, backgroundImage: emojiBackground}}
                 active={active}
-                color={color}
+                color={color || emojiAccent}
                 {...dropHandlers}>
                 <div 
                     className={s.expand}
@@ -64,6 +68,7 @@ export default class CollectionsItemView extends React.PureComponent {
 
                 <ItemTitle>
                     <CollectionTitle {...this.props} />
+                    {_id > 0 && <CollectionReadStatus collectionId={_id} active={active} />}
                 </ItemTitle>
 
                 {this.renderStatus()}
