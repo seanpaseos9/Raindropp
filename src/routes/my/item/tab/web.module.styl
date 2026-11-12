@@ -1,3 +1,15 @@
 .web {
+    width: 100%
     height: calc(100vh - var(--header-height))
+    min-height: 0
+    overflow: hidden
+    overscroll-behavior: contain
+
+    @supports (height: 100dvh) {
+        height: calc(100dvh - var(--header-height))
+    }
+
+    @supports (-webkit-overflow-scrolling: touch) {
+        -webkit-overflow-scrolling: touch
+    }
 }

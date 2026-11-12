@@ -16,6 +16,7 @@ export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCap
     const [editCaptionValue, setEditCaptionValue] = useState('')
     const [addFeedback, setAddFeedback] = useState('')
     const [failedImages, setFailedImages] = useState({})
+    const [imageRatios, setImageRatios] = useState({})
 
     const fileInputRef = useRef(null)
     const trackRef = useRef(null)
@@ -47,6 +48,9 @@ export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCap
             fallbackUrl: originalUrl
         }
     })
+    const activeImage = carouselImages[activeIndex]
+    const activeImageKey = activeImage?.originalUrl || activeImage?.url
+    const activeImageRatio = imageRatios[activeImageKey] || 1.5
 
     // Scroll to specific index programmatically without feedback loop
     const scrollToIndex = useCallback((targetIndex) => {
@@ -367,6 +371,7 @@ export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCap
             {/* Slider Container with Smooth Touch & Drag */}
             <div 
                 className={s.sliderContainer}
+                style={{ '--carousel-ratio': activeImageRatio }}
                 onMouseDown={handleMouseDown}>
                 
                 {count > 1 && (
@@ -400,7 +405,14 @@ export default function NoteImageCarousel({ images = [], onAddImage, onUpdateCap
                                     alt={item.caption || item.title || `Photo ${idx + 1}`}
                                     className={s.image}
                                     referrerPolicy='no-referrer'
-                                    onLoad={() => setFailedImages(current => current[imageKey] ? { ...current, [imageKey]: false } : current)}
+                                    onLoad={e => {
+                                        const { naturalWidth, naturalHeight } = e.currentTarget
+                                        if (naturalWidth && naturalHeight) {
+                                            const ratio = naturalWidth / naturalHeight
+                                            setImageRatios(current => current[imageKey] === ratio ? current : { ...current, [imageKey]: ratio })
+                                        }
+                                        setFailedImages(current => current[imageKey] ? { ...current, [imageKey]: false } : current)
+                                    }}
                                     onError={(e) => handleImageLoadError(e, item, () => setFailedImages(current => ({ ...current, [imageKey]: true })))}
                                 />
                                 {failedImages[imageKey] && <div className={s.imageError}>
