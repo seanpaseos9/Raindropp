@@ -9,7 +9,7 @@ import Settings from './settings'
 import Button from '~co/common/button'
 import Icon from '~co/common/icon'
 
-export default function PageMyItemToolbar({ item, tab, tabs }) {
+export default function PageMyItemToolbar({ item, tab, tabs, webEditSplit, webEditOrientation, onToggleWebEditSplit, onToggleWebEditOrientation }) {
     const navigate = useNavigate()
     const ai_assistant = useSelector(state=>state.config.ai_assistant)
 
@@ -60,6 +60,23 @@ export default function PageMyItemToolbar({ item, tab, tabs }) {
                 target='_blank'>
                 <Icon name='open' />
             </Button>
+
+            {tab == 'web' && tabs.includes('edit') && (
+                <>
+                    <Button
+                        type='button'
+                        onClick={onToggleWebEditSplit}
+                        title={webEditSplit ? 'Close split view' : 'Open Web and Edit together'}>
+                        {webEditSplit ? 'Close split' : 'Web + Edit'}
+                    </Button>
+                    {webEditSplit && <Button
+                        type='button'
+                        onClick={onToggleWebEditOrientation}
+                        title={webEditOrientation === 'top-to-bottom' ? 'Place panels side by side' : 'Stack panels top to bottom'}>
+                        {webEditOrientation === 'top-to-bottom' ? '↔ Side by side' : '↕ Top to bottom'}
+                    </Button>}
+                </>
+            )}
 
             {tab == 'preview' && (item.type == 'article' || item.type == 'book') ? (
                 <Settings

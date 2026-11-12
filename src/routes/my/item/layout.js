@@ -6,8 +6,11 @@ import sessionStorage from '~modules/sessionStorage'
 import * as Reader from '~co/screen/splitview/reader'
 import Toolbar from './toolbar'
 import Highlights from './highlights'
+import Web from './tab/web'
+import Edit from './tab/edit'
+import s from './layout.module.styl'
 
-export default function PageMyItemLayout({ tabs, item, webViewRef }) {
+export default function PageMyItemLayout({ tabs, item, webViewRef, webEditSplit, webEditOrientation, onToggleWebEditSplit, onToggleWebEditOrientation }) {
     const { '*':tab } = useParams()
     const font_color = useSelector(state=>state.config.font_color)
 
@@ -28,11 +31,24 @@ export default function PageMyItemLayout({ tabs, item, webViewRef }) {
                 <Toolbar
                     item={item}
                     tab={tab}
-                    tabs={tabs} />
+                    tabs={tabs}
+                    webEditSplit={webEditSplit}
+                    webEditOrientation={webEditOrientation}
+                    onToggleWebEditSplit={onToggleWebEditSplit}
+                    onToggleWebEditOrientation={onToggleWebEditOrientation} />
             </Reader.Header>
 
             <Reader.Content>
-                <Outlet />
+                {tab === 'web' && webEditSplit && tabs.includes('edit') ? (
+                    <div className={s.webEditSplit} data-orientation={webEditOrientation}>
+                        <section className={s.webPane} aria-label='Web page'>
+                            <Web item={item} webViewRef={webViewRef} />
+                        </section>
+                        <section className={s.editPane} aria-label='Bookmark editor'>
+                            <Edit item={item} />
+                        </section>
+                    </div>
+                ) : <Outlet />}
             </Reader.Content>
 
             <Highlights 

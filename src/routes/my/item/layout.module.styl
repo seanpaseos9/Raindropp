@@ -1,0 +1,50 @@
+.webEditSplit {
+    display: grid
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)
+    width: 100%
+    height: 100%
+    min-height: 0
+}
+
+.webEditSplit[data-orientation='top-to-bottom'] {
+    grid-template-columns: minmax(0, 1fr)
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr)
+}
+
+.webPane,
+.editPane {
+    min-width: 0
+    min-height: 0
+    overflow: auto
+}
+
+.webPane {
+    border-right: 1px solid var(--shadow-color)
+
+    > div {
+        height: 100% !important
+    }
+}
+
+.webEditSplit[data-orientation='top-to-bottom'] .webPane {
+    border-right: 0
+    border-bottom: 1px solid var(--shadow-color)
+}
+
+.editPane :global(.edit) {
+    max-width: none
+    padding: 12px
+}
+
+@media (max-width: 700px) {
+    .webEditSplit {
+        grid-template-columns: minmax(0, 1fr)
+        grid-template-rows: minmax(45vh, 1fr) minmax(45vh, 1fr)
+        overflow: auto
+    }
+
+    .webPane {
+        border-right: 0
+        border-bottom: 1px solid var(--shadow-color)
+    }
+}

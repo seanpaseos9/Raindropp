@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react'
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { target } from '~target'
 import { oneLoad } from '~data/actions/bookmarks'
@@ -23,6 +23,10 @@ export default function PageMyItem() {
 
     //webview
     const webViewRef = useRef(null)
+    const [webEditSplit, setWebEditSplit] = useState(false)
+    const [webEditOrientation, setWebEditOrientation] = useState('side-by-side')
+    const toggleWebEditSplit = useCallback(() => setWebEditSplit(value => !value), [])
+    const toggleWebEditOrientation = useCallback(() => setWebEditOrientation(value => value === 'side-by-side' ? 'top-to-bottom' : 'side-by-side'), [])
     
     //item
     const [isLoading, setIsLoading] = useState(true)
@@ -48,7 +52,7 @@ export default function PageMyItem() {
     return (
         <Routes>
             <Route element={<NotFound item={item} isLoading={isLoading} />}>
-                <Route element={<Layout tabs={tabs} item={item} webViewRef={webViewRef} />}>
+                <Route element={<Layout tabs={tabs} item={item} webViewRef={webViewRef} webEditSplit={webEditSplit} webEditOrientation={webEditOrientation} onToggleWebEditSplit={toggleWebEditSplit} onToggleWebEditOrientation={toggleWebEditOrientation} />}>
                     {tabs.includes('cache') ?
                         <Route path='cache' element={<Cache item={item} />} /> : null
                     }
